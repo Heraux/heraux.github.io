@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GCM · Shape Forge</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+  *{ margin:0; padding:0; box-sizing:border-box; }
+  body{ background:#0d0d1a; overflow:hidden; font-family:'Share Tech Mono',monospace; }
+
+  #title{
+    position:fixed; top:18px; left:50%; transform:translateX(-50%);
+    text-align:center; pointer-events:none; z-index:10;
+  }
+  #title h1{
+    font-family:'Orbitron',sans-serif; font-size:12px; font-weight:900;
+    color:#f0c040; letter-spacing:5px; text-transform:uppercase;
+  }
+  #title p{ font-size:8px; color:#2a3d50; letter-spacing:2px; margin-top:4px; }
+
+  #shape-name{
+    position:fixed; top:16px; right:20px;
+    font-family:'Orbitron',sans-serif; font-size:9px; font-weight:700;
+    color:#f0c04099; letter-spacing:3px; z-index:10; pointer-events:none; text-align:right;
+  }
+  #shape-sub{
+    position:fixed; top:30px; right:20px;
+    font-size:7px; color:#223344; letter-spacing:1.5px;
+    z-index:10; pointer-events:none; text-align:right;
+  }
+
+  /* ── Left panel ── */
+  #panel{
+    position:fixed; left:14px; top:50%; transform:translateY(-50%);
+    z-index:10; display:flex; flex-direction:column; gap:10px;
+  }
+  .plane-block{ display:flex; flex-direction:column; gap:4px; }
+
+  /* label row: plane letter + flip toggles inline */
+  .plane-hdr{
+    display:flex; align-items:center; gap:5px;
+  }
+  .plane-lbl{
+    font-family:'Orbitron',sans-serif; font-size:10px; font-weight:700;
+    letter-spacing:3px; min-width:18px;
+  }
+  /* flip buttons — tiny, icon-only */
+  .flip-btn{
+    font-family:'Share Tech Mono',monospace; font-size:9px;
+    padding:1px 5px; border:1px solid #111a24;
+    background:rgba(13,13,26,0.92); cursor:pointer;
+    transition:all 0.15s; color:#2a3d50; line-height:1.4;
+  }
+  .flip-btn:hover{ border-color:#334455; color:#667788; }
+  .flip-btn.active{ border-color:currentColor !important; }
+
+  .btn-row{ display:flex; flex-direction:column; gap:2px; }
+  .shp-btn{
+    font-family:'Share Tech Mono',monospace; font-size:8px;
+    letter-spacing:1px; padding:3px 9px;
+    border:1px solid #111a24; background:rgba(13,13,26,0.92);
+    cursor:pointer; transition:all 0.15s;
+    color:#2a3d50; text-align:left; white-space:nowrap;
+  }
+  .shp-btn:hover{ border-color:#334455; color:#667788; }
+  .shp-btn.active{ background:rgba(20,38,60,0.7); }
+
+
+  #panel-P{
+    position:fixed; right:14px; top:50%; transform:translateY(-50%);
+    z-index:10; display:flex; flex-direction:column; gap:10px;
+  }
+
+  .divider{ width:100%; height:1px; background:linear-gradient(to right,#0a1828,#1a3040,#0a1828); margin:1px 0; }
+
+  /* ── Per-plane sliders ── */
+  .slider-row{
+    display:flex; align-items:center; gap:5px; padding:2px 0;
+  }
+  .slider-lbl{
+    font-size:7px; letter-spacing:1.5px; color:#2a3d50; min-width:10px;
+  }
+  .slider-val{
+    font-size:7px; letter-spacing:1px; min-width:26px; text-align:right;
+  }
+  input[type=range].forge-slider{
+    -webkit-appearance:none; appearance:none;
+    width:72px; height:2px; border-radius:1px;
+    background:#111a24; outline:none; cursor:pointer;
+  }
+  input[type=range].forge-slider::-webkit-slider-thumb{
+    -webkit-appearance:none; width:8px; height:8px;
+    border-radius:50%; background:currentColor; cursor:pointer;
+  }
+
+  /* ── Spacing slider bar ── */
+  #spacing-bar{
+    display:flex; align-items:center; gap:8px;
+    font-size:8px; letter-spacing:1.5px; color:#2a3d50;
+  }
+  #spacing-bar input{
+    width:110px; accent-color:#f0c04088;
+  }
+  #spacing-val{ color:#f0c04088; min-width:30px; }
+
+
+  /* ── Bottom bar ── */
+  #bot{
+    position:fixed; bottom:32px; left:50%; transform:translateX(-50%);
+    display:flex; align-items:center; gap:8px; z-index:10; flex-wrap:wrap; justify-content:center;
+  }
+  .ctrl-btn{
+    font-family:'Share Tech Mono',monospace; font-size:8.5px;
+    letter-spacing:1.5px; padding:5px 11px;
+    border:1px solid #f0c04044; background:rgba(13,13,26,0.92);
+    color:#f0c04088; cursor:pointer; transition:all 0.2s;
+  }
+  .ctrl-btn:hover, .ctrl-btn.on{ border-color:#f0c040; color:#f0c040; }
+  .twist-lbl{ color:#2a3d50; font-size:8px; letter-spacing:1.5px; }
+
+  #info-bar{
+    position:fixed; bottom:0; left:0; right:0; height:26px;
+    background:rgba(13,13,26,0.97); border-top:1px solid #0d0d1a;
+    display:flex; align-items:center; justify-content:center;
+    font-size:7.5px; letter-spacing:2px; color:#1a2a38; z-index:10;
+  }
+  .layer-lbl{
+    position:fixed; font-family:'Orbitron',sans-serif; font-size:15px; font-weight:700;
+    pointer-events:none; z-index:10; text-shadow:0 0 14px currentColor; transition:opacity 0.3s;
+  }
+
+  /* ── Metrics bar (top right) ── */
+  #metrics{
+    position:fixed; top:52px; right:20px; z-index:10;
+    display:flex; flex-direction:column; gap:3px; align-items:flex-end;
+    pointer-events:none;
+  }
+  .met-row{ display:flex; gap:8px; align-items:center; }
+  .met-key{ font-size:6px; letter-spacing:2px; color:#1a2a38; }
+  .met-val{ font-size:8px; letter-spacing:1px; color:#f0c04077; min-width:32px; text-align:right; }
+  .met-val.hi{ color:#f0c040cc; text-shadow:0 0 8px #f0c04055; }
+
+  /* ── Discovery toggle button ── */
+  #disc-toggle{
+    position:fixed; top:16px; left:50%; transform:translateX(-50%) translateX(160px);
+    font-family:'Share Tech Mono',monospace; font-size:7.5px; letter-spacing:2px;
+    padding:4px 10px; border:1px solid #1a3040; background:rgba(13,13,26,.92);
+    color:#1a3040; cursor:pointer; transition:all .2s; z-index:11;
+  }
+  #disc-toggle:hover,#disc-toggle.open{ border-color:#f0c04077; color:#f0c04077; }
+
+  /* ── Discovery panel (slides in from right) ── */
+  #disc-panel{
+    position:fixed; right:0; top:0; bottom:0; width:230px; z-index:20;
+    background:rgba(9,9,20,.97); border-left:1px solid #0d1a26;
+    transform:translateX(100%); transition:transform .3s ease;
+    display:flex; flex-direction:column;
+  }
+  #disc-panel.open{ transform:translateX(0); }
+
+  #disc-head{
+    padding:18px 14px 10px; border-bottom:1px solid #0a1520;
+    display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+  }
+  #disc-head-title{
+    font-family:'Orbitron',sans-serif; font-size:8px; font-weight:700;
+    letter-spacing:3px; color:#f0c04077;
+  }
+  #disc-close{ font-size:10px; color:#1a3040; cursor:pointer; border:none; background:none;
+    padding:2px 6px; transition:color .15s; }
+  #disc-close:hover{ color:#f0c040; }
+
+  /* Sweep + explore controls */
+  #disc-controls{
+    padding:10px 14px 8px; border-bottom:1px solid #080f18; flex-shrink:0;
+    display:flex; flex-direction:column; gap:6px;
+  }
+  .disc-row{ display:flex; gap:5px; align-items:center; }
+  .d-btn{
+    font-family:'Share Tech Mono',monospace; font-size:7px; letter-spacing:1.5px;
+    padding:4px 9px; border:1px solid #1a3040; background:rgba(9,9,20,.9);
+    color:#1a3040; cursor:pointer; transition:all .18s; flex:1; text-align:center;
+  }
+  .d-btn:hover,.d-btn.on{ border-color:#f0c04066; color:#f0c04088; }
+  .d-btn.active{ border-color:#f0c040; color:#f0c040; }
+  .d-speed{
+    font-family:'Share Tech Mono',monospace; font-size:7px; padding:4px 7px;
+    border:1px solid #1a3040; background:rgba(9,9,20,.9);
+    color:#1a3040; cursor:pointer; transition:all .15s;
+  }
+  .d-speed:hover,.d-speed.on{ border-color:#7ec8a077; color:#7ec8a077; }
+  .d-speed.active{ border-color:#7ec8a0; color:#7ec8a0; }
+  #disc-save{
+    font-family:'Share Tech Mono',monospace; font-size:7px; letter-spacing:2px;
+    padding:5px; border:1px solid #1a3040; background:transparent;
+    color:#1a3040; cursor:pointer; transition:all .2s; text-align:center;
+  }
+  #disc-save:hover{ border-color:#a8d8ea55; color:#a8d8ea66; }
+
+  /* Log */
+  #disc-log{ flex:1; overflow-y:auto; padding:4px 0; }
+  #disc-log::-webkit-scrollbar{ width:3px; }
+  #disc-log::-webkit-scrollbar-thumb{ background:#0d1e2a; }
+  .d-entry{
+    padding:7px 14px; cursor:pointer; transition:background .15s;
+    border-bottom:1px solid #070d18;
+  }
+  .d-entry:hover{ background:rgba(240,192,64,.04); }
+  .d-entry.flash{ background:rgba(240,192,64,.09); }
+  .d-entry.saved{ border-left:2px solid #f0c04055; }
+  .d-name{ font-size:8px; letter-spacing:1px; color:#a8d8ea; margin-bottom:2px; }
+  .d-sub{ font-size:6px; color:#1a3040; letter-spacing:.5px; line-height:1.6; }
+  .d-tag{ display:inline-block; font-size:5.5px; letter-spacing:1.5px; padding:1px 4px;
+    border:1px solid; margin-right:3px; margin-top:2px; }
+  .d-empty{ padding:24px 14px; font-size:7px; letter-spacing:2px; color:#0e1e2e; text-align:center; line-height:2; }
+
+  /* Explore progress */
+  #disc-prog{
+    height:2px; background:#0a1520; flex-shrink:0; position:relative; overflow:hidden;
+  }
+  #disc-prog-bar{ height:100%; background:#f0c04055; width:0%; transition:width .2s; }
+</style>
+</head>
+<body>
+
+<div id="title">
+  <h1>GCM · SHAPE FORGE</h1>
+  <p>Glass Corridor Method &nbsp;·&nbsp; A · P · B &nbsp;·&nbsp; Drag to orbit · Scroll to zoom</p>
+</div>
+<div id="shape-name">—</div>
+<div id="shape-sub">A · P · B</div>
+
+<!-- Metrics bar -->
+<div id="metrics">
+  <div class="met-row"><span class="met-key">VERTS</span><span class="met-val" id="m-v">—</span></div>
+  <div class="met-row"><span class="met-key">EDGES</span><span class="met-val" id="m-e">—</span></div>
+  <div class="met-row"><span class="met-key">DIM</span><span class="met-val" id="m-d">—</span></div>
+  <div class="met-row"><span class="met-key">SYM</span><span class="met-val" id="m-s">—</span></div>
+</div>
+
+<!-- Discovery toggle -->
+<button id="disc-toggle" onclick="toggleDisc()">◈ DISCOVER</button>
+
+<!-- Discovery panel -->
+<div id="disc-panel">
+  <div id="disc-head">
+    <span id="disc-head-title">◈ DISCOVERIES</span>
+    <button id="disc-close" onclick="toggleDisc()">✕</button>
+  </div>
+  <div id="disc-controls">
+    <div class="disc-row">
+      <button class="d-btn" id="d-sweep" onclick="runSweep()">▶ AUTO SWEEP</button>
+      <button class="d-btn" id="d-pause-exp" onclick="toggleExplore()" style="display:none">❙❙ PAUSE</button>
+      <button class="d-btn" id="d-stop" onclick="stopExplore()" style="display:none">■ STOP</button>
+    </div>
+    <div class="disc-row" id="d-speed-row">
+      <span style="font-size:6px;letter-spacing:2px;color:#1a2a38;">SPEED</span>
+      <button class="d-speed" id="ds-s" onclick="setExpSpeed(2200)">S</button>
+      <button class="d-speed on" id="ds-m" onclick="setExpSpeed(1200)">M</button>
+      <button class="d-speed" id="ds-f" onclick="setExpSpeed(500)">F</button>
+    </div>
+    <button id="disc-save" onclick="saveCurrentState()">+ SAVE CURRENT STATE</button>
+  </div>
+  <div id="disc-prog"><div id="disc-prog-bar"></div></div>
+  <div id="disc-log"><div class="d-empty">RUN AUTO SWEEP OR<br>SAVE A STATE<br><br>DISCOVERIES APPEAR HERE</div></div>
+</div>
+
+<div id="panel">
+  <div class="plane-block" id="block-A">
+    <div class="plane-hdr">
+      <div class="plane-lbl" style="color:#a8d8ea">A</div>
+      <button class="flip-btn" id="flipX-A" style="color:#a8d8ea44" onclick="toggleFlip('A','x')">⇔</button>
+      <button class="flip-btn" id="flipY-A" style="color:#a8d8ea44" onclick="toggleFlip('A','y')">⇅</button>
+    </div>
+    <div class="slider-row" style="color:#a8d8ea">
+      <span class="slider-lbl">W</span>
+      <input type="range" class="forge-slider" id="sw-A" min="0.3" max="2.5" step="0.05" value="1.0" oninput="onSlider('A')" style="color:#a8d8ea">
+      <span class="slider-val" id="swv-A" style="color:#a8d8ea88">1.0×</span>
+    </div>
+    <div class="slider-row" style="color:#a8d8ea">
+      <span class="slider-lbl">H</span>
+      <input type="range" class="forge-slider" id="sh-A" min="0.3" max="2.5" step="0.05" value="1.0" oninput="onSlider('A')" style="color:#a8d8ea">
+      <span class="slider-val" id="shv-A" style="color:#a8d8ea88">1.0×</span>
+    </div>
+    <div class="btn-row" id="btns-A"></div>
+  </div>
+  <div class="divider"></div>
+  <div class="plane-block" id="block-B">
+    <div class="plane-hdr">
+      <div class="plane-lbl" style="color:#7ec8a0">B</div>
+      <button class="flip-btn" id="flipX-B" style="color:#7ec8a044" onclick="toggleFlip('B','x')">⇔</button>
+      <button class="flip-btn" id="flipY-B" style="color:#7ec8a044" onclick="toggleFlip('B','y')">⇅</button>
+    </div>
+    <div class="slider-row" style="color:#7ec8a0">
+      <span class="slider-lbl">W</span>
+      <input type="range" class="forge-slider" id="sw-B" min="0.3" max="2.5" step="0.05" value="1.0" oninput="onSlider('B')" style="color:#7ec8a0">
+      <span class="slider-val" id="swv-B" style="color:#7ec8a088">1.0×</span>
+    </div>
+    <div class="slider-row" style="color:#7ec8a0">
+      <span class="slider-lbl">H</span>
+      <input type="range" class="forge-slider" id="sh-B" min="0.3" max="2.5" step="0.05" value="1.0" oninput="onSlider('B')" style="color:#7ec8a0">
+      <span class="slider-val" id="shv-B" style="color:#7ec8a088">1.0×</span>
+    </div>
+    <div class="btn-row" id="btns-B"></div>
+  </div>
+</div>
+
+<div id="bot">
+  <button class="ctrl-btn on" id="btn-frame" onclick="toggleFraming()">FRAMING</button>
+  <button class="ctrl-btn on" id="btn-pulse" onclick="toggleParticles()">PULSE</button>
+  <button class="ctrl-btn" id="btn-flatp" onclick="toggleFlatP()" style="border-color:#f0c04044;color:#f0c04066;">⬡ FLAT P</button>
+  <div id="spacing-bar">
+    <span>SPACING</span>
+    <input type="range" id="spacing-slider" min="1.5" max="5.0" step="0.1" value="2.6"
+      oninput="onSpacingSlider()" style="width:120px;accent-color:#f0c04088;">
+    <span id="spacing-val">2.6</span>
+  </div>
+  <button class="ctrl-btn" id="btn-pause" onclick="togglePause()">PAUSE</button>
+</div>
+
+<div id="panel-P">
+  <div class="plane-block" id="block-P">
+    <div class="plane-hdr">
+      <div class="plane-lbl" style="color:#f0c040" id="lbl-P">P</div>
+      <button class="flip-btn" id="flipX-P" style="color:#f0c04044" onclick="toggleFlip('P','x')">⇔</button>
+      <button class="flip-btn" id="flipY-P" style="color:#f0c04044" onclick="toggleFlip('P','y')">⇅</button>
+    </div>
+    <div class="slider-row" style="color:#f0c040">
+      <span class="slider-lbl">W</span>
+      <input type="range" class="forge-slider" id="sw-P" min="0.3" max="2.5" step="0.05" value="1.0" oninput="onSlider('P')" style="color:#f0c040">
+      <span class="slider-val" id="swv-P" style="color:#f0c04088">1.0×</span>
+    </div>
+    <div class="slider-row" style="color:#f0c040">
+      <span class="slider-lbl">H</span>
+      <input type="range" class="forge-slider" id="sh-P" min="0.3" max="2.5" step="0.05" value="1.0" oninput="onSlider('P')" style="color:#f0c040">
+      <span class="slider-val" id="shv-P" style="color:#f0c04088">1.0×</span>
+    </div>
+    <div class="btn-row" id="btns-P"></div>
+  </div>
+</div>
+
+<div id="info-bar">GCM · SHAPE FORGE &nbsp;·&nbsp; AUGUSTUS VEIL &nbsp;·&nbsp; A · P · B · W AXIS</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const PI=Math.PI, PI2=PI*2;
+function v3(x,y,z){ return new THREE.Vector3(x,y,z); }
+
+// ── Renderer ──────────────────────────────────────────────────────────────
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(0x0d0d1a,1);
+document.body.appendChild(renderer.domElement);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(52,window.innerWidth/window.innerHeight,0.01,200);
+
+// ── Orbit ─────────────────────────────────────────────────────────────────
+let drag=false,pm={x:0,y:0},tp=null,paused=false;
+let sph={theta:0.55,phi:1.18,r:13};
+renderer.domElement.addEventListener('mousedown',e=>{drag=true;pm={x:e.clientX,y:e.clientY};});
+window.addEventListener('mouseup',()=>drag=false);
+window.addEventListener('mousemove',e=>{
+  if(!drag)return;
+  sph.theta-=(e.clientX-pm.x)*0.007;
+  sph.phi=Math.max(0.08,Math.min(PI-0.08,sph.phi+(e.clientY-pm.y)*0.007));
+  pm={x:e.clientX,y:e.clientY};
+});
+renderer.domElement.addEventListener('wheel',e=>{sph.r=Math.max(4,Math.min(24,sph.r+e.deltaY*0.013));});
+renderer.domElement.addEventListener('touchstart',e=>{tp={x:e.touches[0].clientX,y:e.touches[0].clientY};},{passive:true});
+renderer.domElement.addEventListener('touchmove',e=>{
+  if(!tp)return;
+  sph.theta-=(e.touches[0].clientX-tp.x)*0.007;
+  sph.phi=Math.max(0.08,Math.min(PI-0.08,sph.phi+(e.touches[0].clientY-tp.y)*0.007));
+  tp={x:e.touches[0].clientX,y:e.touches[0].clientY};
+},{passive:true});
+renderer.domElement.addEventListener('touchend',()=>tp=null,{passive:true});
+
+// ── Constants ─────────────────────────────────────────────────────────────
+let WY=2.6; const R=1.1, H=0.85;
+
+// ─────────────────────────────────────────────────────────────────────────
+//  SHAPE LIBRARY — explicit verts and edges
+// ─────────────────────────────────────────────────────────────────────────
+const SHAPES=[
+  {id:'pt',   label:'·  1 POINT',     short:'PT' },
+  {id:'2pt',  label:'·· 2 POINTS',    short:'2PT'},
+  {id:'3pt',  label:'△  3 POINTS',    short:'3PT'},
+  {id:'4pt',  label:'□  4 POINTS',    short:'4PT'},
+  {id:'tet',  label:'⬡  TETRAHEDRON', short:'TET'},
+  {id:'oct',  label:'◇  OCTAHEDRON',  short:'OCT'},
+  {id:'ico',  label:'⬡  ICOSAHEDRON', short:'ICO'},
+  {id:'pant', label:'⟐  PENT ANTIPRISM',short:'PAP'},
+  {id:'cbp',  label:'◈  CUBIC BIPYRAMID',short:'CBP'},
+  {id:'sap',  label:'⬡  SQ ANTIPRISM',   short:'SAP'},
+  {id:'c16',  label:'◈  16-CELL',        short:'16C'},
+  {id:'cube', label:'⬛ CUBE',            short:'CBE'},
+];
+
+function makeShape(id,cy){
+  switch(id){
+    case 'pt':
+      return{verts:[v3(0,cy,0)],edges:[]};
+
+    case '2pt':
+      return{verts:[v3(-R*.9,cy,0),v3(R*.9,cy,0)],edges:[[0,1]]};
+
+    case '3pt':{
+      const vs=[0,1,2].map(i=>{const a=i/3*PI2+PI/2;return v3(Math.cos(a)*R,cy,Math.sin(a)*R);});
+      return{verts:vs,edges:[[0,1],[1,2],[2,0]]};
+    }
+    case '4pt':{
+      const s=R*.9;
+      return{verts:[v3(-s,cy,-s),v3(s,cy,-s),v3(s,cy,s),v3(-s,cy,s)],edges:[[0,1],[1,2],[2,3],[3,0]]};
+    }
+    case 'tet':{
+      const br=R*1.05,yBase=cy-H*.4,yApex=cy+H*1.0;
+      return{
+        verts:[v3(br,yBase,0),v3(-br*.5,yBase,br*.866),v3(-br*.5,yBase,-br*.866),v3(0,yApex,0)],
+        edges:[[0,1],[1,2],[2,0],[0,3],[1,3],[2,3]]
+      };
+    }
+    case 'oct':{
+      const eq=R*1.05,pole=H*1.15;
+      return{
+        verts:[v3(eq,cy,0),v3(0,cy,eq),v3(-eq,cy,0),v3(0,cy,-eq),v3(0,cy+pole,0),v3(0,cy-pole,0)],
+        edges:[[0,1],[1,2],[2,3],[3,0],[4,0],[4,1],[4,2],[4,3],[5,0],[5,1],[5,2],[5,3]]
+      };
+    }
+    case 'pant':{
+      // Pentagonal antiprism — the middle belt of the icosahedron
+      // 10 verts: upper pentagon + lower pentagon rotated 36°, with zigzag edges
+      const rr=R*1.05, yU=cy+H*0.55, yL=cy-H*0.55;
+      const PI2=Math.PI*2, a0=Math.PI/2, a1=Math.PI/2+Math.PI/5;
+      const uRing=[0,1,2,3,4].map(i=>v3(Math.cos(a0+PI2*i/5)*rr, yU, Math.sin(a0+PI2*i/5)*rr));
+      const lRing=[0,1,2,3,4].map(i=>v3(Math.cos(a1+PI2*i/5)*rr, yL, Math.sin(a1+PI2*i/5)*rr));
+      // 0-4 = upper ring, 5-9 = lower ring
+      const verts=[...uRing,...lRing];
+      const edges=[
+        // upper pentagon (5)
+        [0,1],[1,2],[2,3],[3,4],[4,0],
+        // lower pentagon (5)
+        [5,6],[6,7],[7,8],[8,9],[9,5],
+        // zigzag between rings (10)
+        [0,5],[0,9],[1,5],[1,6],[2,6],[2,7],[3,7],[3,8],[4,8],[4,9],
+      ];
+      return{verts,edges};
+    }
+    case 'ico':{
+      // Forge-style explicit: top pole + upper ring(5) + lower ring(5) + bottom pole
+      // 12 verts, 30 edges — using R and H constants exactly like oct and tet
+      const rr=R*1.05, yT=cy+H*1.15, yU=cy+H*0.35, yL=cy-H*0.35, yB=cy-H*1.15;
+      const PI2=Math.PI*2, a0=Math.PI/2, a1=Math.PI/2+Math.PI/5;
+      const uRing=[0,1,2,3,4].map(i=>v3(Math.cos(a0+PI2*i/5)*rr, yU, Math.sin(a0+PI2*i/5)*rr));
+      const lRing=[0,1,2,3,4].map(i=>v3(Math.cos(a1+PI2*i/5)*rr, yL, Math.sin(a1+PI2*i/5)*rr));
+      // 0=top  1-5=upper ring  6-10=lower ring  11=bottom
+      const verts=[v3(0,yT,0),...uRing,...lRing,v3(0,yB,0)];
+      const edges=[
+        [0,1],[0,2],[0,3],[0,4],[0,5],          // top → upper (5)
+        [1,2],[2,3],[3,4],[4,5],[5,1],           // upper ring (5)
+        [1,6],[1,10],[2,6],[2,7],[3,7],          // upper ↔ lower zigzag (10)
+        [3,8],[4,8],[4,9],[5,9],[5,10],
+        [6,7],[7,8],[8,9],[9,10],[10,6],         // lower ring (5)
+        [6,11],[7,11],[8,11],[9,11],[10,11],     // lower → bottom (5)
+      ];
+      return{verts,edges};
+    }
+    case 'c16':{
+      // 16-cell — CEILING point + MIDDLE octahedron + FLOOR point
+      // 8 verts, 24 edges — using Forge R and H constants
+      // Middle octahedron: 4 equatorial arms (E/W/N/S) + oct-top + oct-bot
+      const eq=R*1.05, my=H*0.42, pole=H*1.15;
+      const verts=[
+        v3( eq, cy,   0),   // 0 EAST
+        v3(-eq, cy,   0),   // 1 WEST
+        v3(  0, cy,  eq),   // 2 NORTH
+        v3(  0, cy, -eq),   // 3 SOUTH
+        v3(  0, cy+my, 0),  // 4 OCT-TOP
+        v3(  0, cy-my, 0),  // 5 OCT-BOT
+        v3(  0, cy+pole, 0),// 6 CEILING
+        v3(  0, cy-pole, 0),// 7 FLOOR
+      ];
+      const edges=[
+        // middle octahedron (12)
+        [0,4],[1,4],[2,4],[3,4],  // equatorial → oct-top
+        [0,5],[1,5],[2,5],[3,5],  // equatorial → oct-bot
+        [0,2],[2,1],[1,3],[3,0],  // equatorial ring
+        // ceiling → all 6 middle verts (6)
+        [6,0],[6,1],[6,2],[6,3],[6,4],[6,5],
+        // floor → all 6 middle verts (6)
+        [7,0],[7,1],[7,2],[7,3],[7,4],[7,5],
+      ];
+      return{verts,edges};
+    }
+    case 'cube':{
+      const s=R*.9,yb=cy-H*.85,yt=cy+H*.85;
+      return{
+        verts:[v3(-s,yb,-s),v3(s,yb,-s),v3(s,yb,s),v3(-s,yb,s),v3(-s,yt,-s),v3(s,yt,-s),v3(s,yt,s),v3(-s,yt,s)],
+        edges:[[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]]
+      };
+    }
+    case 'sap':{
+      // Square antiprism — two squares offset 45°, connected by 8 triangles
+      // 8 verts, 16 edges: top square(4) + bot square(4) + zigzag(8)
+      const s=R*1.0, yU=cy+H*0.55, yL=cy-H*0.55;
+      const a0=Math.PI/4, a1=Math.PI/4+Math.PI/4; // 0° and 45° offset
+      const uRing=[0,1,2,3].map(i=>v3(Math.cos(a0+PI2*i/4)*s, yU, Math.sin(a0+PI2*i/4)*s));
+      const lRing=[0,1,2,3].map(i=>v3(Math.cos(a1+PI2*i/4)*s, yL, Math.sin(a1+PI2*i/4)*s));
+      // 0-3=upper square, 4-7=lower square
+      const verts=[...uRing,...lRing];
+      const edges=[
+        // upper square (4)
+        [0,1],[1,2],[2,3],[3,0],
+        // lower square (4)
+        [4,5],[5,6],[6,7],[7,4],
+        // zigzag between rings (8)
+        [0,4],[0,7],[1,4],[1,5],[2,5],[2,6],[3,6],[3,7],
+      ];
+      return{verts,edges};
+    }
+    case 'cbp':{
+      // Cubic bipyramid — cube in the middle + top pole + bottom pole
+      // 10 verts, 28 edges: 12 cube + 8 top spokes + 8 bot spokes
+      const s=R*.9, yc=H*.42, pole=H*1.15;
+      // Cube: top face (0-3) + bot face (4-7), poles at 8 and 9
+      const verts=[
+        v3(-s, cy+yc,-s), v3( s, cy+yc,-s), v3( s, cy+yc, s), v3(-s, cy+yc, s), // 0-3 top face
+        v3(-s, cy-yc,-s), v3( s, cy-yc,-s), v3( s, cy-yc, s), v3(-s, cy-yc, s), // 4-7 bot face
+        v3( 0, cy+pole, 0),  // 8 = top pole
+        v3( 0, cy-pole, 0),  // 9 = bot pole
+      ];
+      const edges=[
+        // cube top face ring (4)
+        [0,1],[1,2],[2,3],[3,0],
+        // cube bot face ring (4)
+        [4,5],[5,6],[6,7],[7,4],
+        // cube vertical edges (4)
+        [0,4],[1,5],[2,6],[3,7],
+        // top pole → all 8 cube verts (8)
+        [8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,6],[8,7],
+        // bot pole → all 8 cube verts (8)
+        [9,0],[9,1],[9,2],[9,3],[9,4],[9,5],[9,6],[9,7],
+      ];
+      return{verts,edges};
+    }
+    default:return{verts:[v3(0,cy,0)],edges:[]};
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  FLIP — applied after makeShape
+//  flipX: mirror across ZY plane  (x → -x)
+//  flipY: mirror Y around the plane centre (v.y → 2*cy - v.y)
+//         → for flat shapes this is a no-op; for 3D shapes it inverts the apex
+// ─────────────────────────────────────────────────────────────────────────
+function applyFlip(verts,cy,fx,fy){
+  // edges stay the same — only positions change
+  return verts.map(v=>v3(
+    fx ? -v.x : v.x,
+    fy ? 2*cy - v.y : v.y,
+    v.z
+  ));
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  TWIST — Y-axis rotation on the full XZ, applied to B only
+// ─────────────────────────────────────────────────────────────────────────
+function applyTwist(verts,deg){
+  if(!deg)return verts;
+  const a=deg*PI/180,c=Math.cos(a),s=Math.sin(a);
+  return verts.map(v=>v3(v.x*c-v.z*s,v.y,v.x*s+v.z*c));
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  XZ helpers — used everywhere pairing / proximity is needed
+//  Y is irrelevant for matching because A=+2.6, B=-2.6
+// ─────────────────────────────────────────────────────────────────────────
+function xzDist(a,b){const dx=a.x-b.x,dz=a.z-b.z;return Math.sqrt(dx*dx+dz*dz);}
+function xzAngle(v){return Math.atan2(v.z,v.x);}
+
+// Nearest by XZ only
+function nearestXZ(pt,arr){
+  let best=arr[0],bd=xzDist(pt,arr[0]);
+  arr.forEach(b=>{const d=xzDist(pt,b);if(d<bd){bd=d;best=b;}});
+  return best;
+}
+
+// Angular pairing: match each vert in src to closest-angle vert in tgt
+// Returns array of tgt verts aligned to src
+function angularPair(src,tgt){
+  return src.map(a=>{
+    const ang=xzAngle(a);
+    let best=tgt[0],bd=Infinity;
+    tgt.forEach(b=>{let d=Math.abs(xzAngle(b)-ang);if(d>PI)d=PI2-d;if(d<bd){bd=d;best=b;}});
+    return best;
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  FRAMING — full logic review
+//
+//  The job: draw faint guide lines connecting A→P and B→P so the user
+//  can see how the two boundary shapes relate through the center.
+//
+//  Cases handled in strict priority order:
+//
+//  [0] Guard — if any array is empty, skip that half silently.
+//
+//  [1] P = 1 point (the "hub" case)
+//      Every A vert and every B vert connects directly to the single P point.
+//      This covers pt:pt:pt, cube:pt:cube, 2pt:pt:2pt, etc.
+//      Result: a clean fan through the center point.
+//
+//  [2] A = 1 point, P = multi
+//      The single A point fans out to every P vert (a star burst upward).
+//      Then B→P is handled normally by rule [4/5].
+//
+//  [3] B = 1 point, P = multi
+//      The single B point fans out to every P vert (a star burst downward).
+//      A→P is already handled by rule [2/4/5].
+//
+//  [4] A.count === P.count  →  index pair (A[i] → P[i])
+//      Counts match exactly: direct 1-to-1. No ambiguity.
+//      Works cleanly for 3pt:3pt:3pt, cube:cube:cube, etc.
+//
+//  [5] A.count ≠ P.count  →  angular pair
+//      Each A vert connects to the P vert whose XZ angle is closest.
+//      Multiple A verts may share a P vert — that's intentional and visible.
+//      Same logic mirrored for B.
+//
+//  Note: "line" (2pt) verts sit at XZ angles 0° and 180° before any twist.
+//  After twist they rotate together, so angular pairing always reflects the
+//  actual geometric relationship — no special-casing needed for lines.
+// ─────────────────────────────────────────────────────────────────────────
+function buildFraming(vA,vP,vB){
+  const segs=[];
+  if(!vA.length||!vP.length||!vB.length) return segs;
+
+  // [1] P is a single hub — everything fans through it
+  if(vP.length===1){
+    const p0=vP[0];
+    vA.forEach(a=>segs.push({a,b:p0,col:0xa8d8ea,op:0.32}));
+    vB.forEach(b=>segs.push({a:p0,b,col:0x7ec8a0,op:0.32}));
+    return segs;
+  }
+
+  // A → P  ([2] single point fan | [4] index pair | [5] angular pair)
+  if(vA.length===1){
+    vP.forEach(p=>segs.push({a:vA[0],b:p,col:0xa8d8ea,op:0.30}));
+  } else if(vA.length===vP.length){
+    vA.forEach((a,i)=>segs.push({a,b:vP[i],col:0xa8d8ea,op:0.30}));
+  } else {
+    angularPair(vA,vP).forEach((p,i)=>segs.push({a:vA[i],b:p,col:0xa8d8ea,op:0.26}));
+  }
+
+  // B → P  ([3] single point fan | [4] index pair | [5] angular pair)
+  if(vB.length===1){
+    vP.forEach(p=>segs.push({a:vB[0],b:p,col:0x7ec8a0,op:0.30}));
+  } else if(vB.length===vP.length){
+    vB.forEach((b,i)=>segs.push({a:b,b:vP[i],col:0x7ec8a0,op:0.30}));
+  } else {
+    angularPair(vB,vP).forEach((p,i)=>segs.push({a:vB[i],b:p,col:0x7ec8a0,op:0.26}));
+  }
+
+  return segs;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  EMERGE — P as midpoints of A↔B ring verts, edges by proximity
+//
+//  Why "ring verts": 3D shapes have center verts (tet apex, oct poles) at
+//  XZ=(0,0). Including them shrinks minD → threshold too tight → outer verts
+//  never connect. We strip center verts, dedup by XZ, sort by angle, then pair.
+// ─────────────────────────────────────────────────────────────────────────
+function xzRingDedup(verts){
+  // 1. Drop verts sitting at XZ center (apex, poles)
+  const ring=verts.filter(v=>Math.sqrt(v.x*v.x+v.z*v.z)>0.05);
+  // 2. If everything was center (e.g. pt shape), keep originals
+  const use=ring.length>0?ring:verts;
+  // 3. XZ-deduplicate (cube has 8 verts but only 4 unique XZ corners)
+  const out=[];
+  use.forEach(v=>{
+    if(!out.some(u=>Math.abs(u.x-v.x)<0.012&&Math.abs(u.z-v.z)<0.012))out.push(v);
+  });
+  // 4. Sort by XZ angle → consistent index-pairing between A and B
+  out.sort((a,b)=>xzAngle(a)-xzAngle(b));
+  return out;
+}
+
+function emergeShape(vA,vB){
+  const uA=xzRingDedup(vA);
+  const uB=xzRingDedup(vB);
+  if(uA.length===0||uB.length===0)return{verts:[],edges:[]};
+
+  // Pair: index when counts match (both sorted by angle, so pairing is angular);
+  //       angular nearest when counts differ
+  const paired=uA.length===uB.length?uB:angularPair(uA,uB);
+
+  const verts=uA.map((a,i)=>v3((a.x+paired[i].x)*.5,0,(a.z+paired[i].z)*.5));
+  if(verts.length<2)return{verts,edges:[]};
+
+  // Find the shortest nonzero XZ distance between any two midpoints
+  let minD=Infinity;
+  for(let i=0;i<verts.length;i++)
+    for(let j=i+1;j<verts.length;j++){
+      const d=xzDist(verts[i],verts[j]);
+      if(d>0.04&&d<minD)minD=d;
+    }
+  // Connect all pairs within 1.65× the shortest edge length
+  const thresh=minD*1.65;
+  const edges=[];
+  for(let i=0;i<verts.length;i++)
+    for(let j=i+1;j<verts.length;j++)
+      if(xzDist(verts[i],verts[j])<=thresh)edges.push([i,j]);
+
+  return{verts,edges};
+}
+
+// ── Scene groups ──────────────────────────────────────────────────────────
+const mainGroup=new THREE.Group();scene.add(mainGroup);
+const corridorGrp=new THREE.Group();mainGroup.add(corridorGrp);
+const geomGrp=new THREE.Group();mainGroup.add(geomGrp);
+
+// ── Particles ─────────────────────────────────────────────────────────────
+const PC=170;
+const pGeo=new THREE.BufferGeometry();
+const pPos=new Float32Array(PC*3),pVel=new Float32Array(PC),pPhase=new Float32Array(PC);
+for(let i=0;i<PC;i++){
+  pPos[i*3]=(Math.random()-.5)*6;pPos[i*3+1]=(Math.random()-1)*10;pPos[i*3+2]=(Math.random()-.5)*6;
+  pVel[i]=0.012+Math.random()*.022;pPhase[i]=Math.random()*PI2;
+}
+pGeo.setAttribute('position',new THREE.BufferAttribute(pPos,3));
+const pMat=new THREE.PointsMaterial({color:0xf0c040,size:0.042,transparent:true,opacity:0.55});
+const particleMesh=new THREE.Points(pGeo,pMat);
+mainGroup.add(particleMesh);
+
+// ── Corridor (3 glass cubes) ──────────────────────────────────────────────
+function buildCorridor(){
+  while(corridorGrp.children.length)corridorGrp.remove(corridorGrp.children[0]);
+  const defs=[
+    {col:0xa8d8ea, y:WY,  plane:'A'},
+    {col:0xf0c040, y:0,   plane:'P'},
+    {col:0x7ec8a0, y:-WY, plane:'B'},
+  ];
+  defs.forEach(({col,y,plane})=>{
+    const bw=4.0*scaleW[plane], bh=BOX_BASE_H*scaleH[plane];
+    const geo=new THREE.BoxGeometry(bw, bh, bw);
+    const fill=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.016,side:THREE.FrontSide,depthWrite:false}));
+    fill.position.y=y;
+    const wire=new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:col,transparent:true,opacity:0.28}));
+    wire.position.y=y;
+    corridorGrp.add(fill,wire);
+  });
+  const wg=new THREE.BufferGeometry().setFromPoints([v3(0,-6.2,0),v3(0,6.2,0)]);
+  corridorGrp.add(new THREE.Line(wg,new THREE.LineBasicMaterial({color:0x1a3040,transparent:true,opacity:0.45})));
+}
+
+// ── Draw primitives ────────────────────────────────────────────────────────
+function mkDot(pos,col,r=0.10){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(r,10,10),new THREE.MeshBasicMaterial({color:col}));
+  m.position.copy(pos);return m;
+}
+function mkLine(a,b,col,op=1){
+  const g=new THREE.BufferGeometry().setFromPoints([a,b]);
+  return new THREE.Line(g,new THREE.LineBasicMaterial({color:col,transparent:op<1,opacity:op}));
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────────────────────────────────
+const state={A:'pt',P:'pt',B:'pt'};
+
+// flip[plane] = { x: bool, y: bool }
+const flipState={
+  A:{x:false,y:false},
+  P:{x:false,y:false},
+  B:{x:false,y:false}
+};
+
+let twistA=0, twistB=0;
+let showFraming=true,showParticles=true,showFlatP=false;
+
+// ── Per-plane scale state ──────────────────────────────────────────────────
+const scaleW={A:1.0, P:1.0, B:1.0};  // XZ scale (width)
+const scaleH={A:1.0, P:1.0, B:1.0};  // Y scale (height)
+
+// Box half-heights for each plane (used for collision prevention)
+const BOX_BASE_H=1.8;
+function boxHH(plane){ return (BOX_BASE_H * scaleH[plane]) / 2; }
+function minWY(){ return Math.max(boxHH('A')+boxHH('P'), boxHH('P')+boxHH('B')) + 0.15; }
+
+// Apply scale to shape verts (sw=XZ scale, sh=Y scale around cy)
+function applyScale(verts, cy, sw, sh){
+  return verts.map(v=>v3(
+    (v.x-0)*sw,          // XZ scale around origin
+    cy + (v.y-cy)*sh,    // Y scale around corridor center
+    (v.z-0)*sw
+  ));
+}
+
+// Slider handlers
+function onSlider(plane){
+  const sw=parseFloat(document.getElementById('sw-'+plane).value);
+  const sh=parseFloat(document.getElementById('sh-'+plane).value);
+  scaleW[plane]=sw; scaleH[plane]=sh;
+  document.getElementById('swv-'+plane).textContent=sw.toFixed(1)+'×';
+  document.getElementById('shv-'+plane).textContent=sh.toFixed(1)+'×';
+  // Clamp spacing to prevent box overlap
+  const mn=minWY();
+  if(WY<mn){ WY=mn; document.getElementById('spacing-slider').value=WY.toFixed(1); document.getElementById('spacing-val').textContent=WY.toFixed(1); }
+  buildCorridor(); build();
+}
+
+function onSpacingSlider(){
+  const raw=parseFloat(document.getElementById('spacing-slider').value);
+  WY=Math.max(raw, minWY());
+  document.getElementById('spacing-slider').value=WY.toFixed(1);
+  document.getElementById('spacing-val').textContent=WY.toFixed(1);
+  buildCorridor(); build();
+}
+
+// ── Twist snaps by shape symmetry ─────────────────────────────────────────
+const TWIST_SNAPS={
+  pt:[0],
+  '2pt':[0,45,90],
+  '3pt':[0,30,60],
+  '4pt':[0,22.5,45],
+  tet:[0,30,60],
+  oct:[0,22.5,45],
+  cube:[0,22.5,45],
+};
+
+// ── Name table ────────────────────────────────────────────────────────────
+const NAMES={
+  'pt:pt:pt':      ['POINT LINE POINT',      'minimal W corridor'],
+  '2pt:pt:2pt':    ['LINE PAIR',              'two poles, two echoes'],
+  '3pt:pt:3pt':    ['TRIANGULAR COLUMN',      'prism seed'],
+  '4pt:pt:4pt':    ['SQUARE COLUMN',          'square prism seed'],
+  'pt:3pt:pt':     ['TRIANGULAR BIPYRAMID',   '5 faces · dual of triangular prism'],
+  'pt:4pt:pt':     ['SQUARE BIPYRAMID',       'octahedron family · 8 faces'],
+  'pt:oct:pt':     ['OCTAHEDRON + POLES',     'polar corridor'],
+  'pt:tet:pt':     ['TETRAHEDRON + POLES',    'tetrahedral corridor'],
+  'pt:cube:pt':    ['CUBE + POLES',           'cubic corridor'],
+  'tet:pt:tet':    ['DUAL TETRAHEDRA',        'two tetrahedra mirrored'],
+  'oct:pt:oct':    ['OCTAHEDRAL PAIR',        'co-planar duals'],
+  'cube:pt:cube':  ['PROTO-TESSERACT',        'cubic scaffold · 4D hint'],
+  'tet:tet:tet':   ['16-CELL ECHO',           'three tetrahedra stacked'],
+  'oct:oct:oct':   ['24-CELL SHADOW',         'stacked octahedra'],
+  'cube:cube:cube':['TESSERACT',              'four-dimensional cube shadow'],
+  '3pt:3pt:3pt':   ['TRIANGULAR PRISM',       'simplest 3D prism'],
+  '4pt:4pt:4pt':   ['CUBE STACK',             'rectangular solid'],
+  'tet:oct:tet':   ['STELLA OCTANGULA',       'Kepler · two tetrahedra compound'],
+  'oct:cube:oct':  ['OCTACUBE',               'oct-cube compound'],
+  'cube:oct:cube': ['HYPER-CORRIDOR',         'cube-oct-cube sandwich'],
+  '3pt:4pt:3pt':   ['ANTIPRISM SEED',         'twisted tri-square stack'],
+  '4pt:3pt:4pt':   ['TWISTED PRISM',          'square-tri-square'],
+  'tet:cube:tet':  ['NESTED DUAL',            'tetrahedra flanking cube'],
+  'oct:tet:oct':   ['COMPOUND FRAME',         'tetrahedral core, octahedral wings'],
+  'pt:2pt:pt':     ['LINE EMERGENCE',         'two points birthed from poles'],
+  '2pt:2pt:2pt':   ['DOUBLE LINE',            'parallel pair'],
+  '3pt:oct:3pt':   ['TRI-OCT-TRI',            'octahedral bridge'],
+  '4pt:oct:4pt':   ['SQ BIPYRAMID FRAME',     'oct framed by squares'],
+  '2pt:4pt:2pt':   ['BUTTERFLY',              'two anchors, square span'],
+  '4pt:tet:4pt':   ['PYRAMID SCAFFOLD',       'square base around tetrahedron'],
+};
+const DIM={pt:0,'2pt':1,'3pt':2,'4pt':2,tet:3,oct:3,cube:3};
+
+function getNames(a,p,b){
+  return NAMES[`${a}:${p}:${b}`]||['—',`A=${a} · P=${p} · B=${b}`];
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  BUILD — assembles everything
+// ─────────────────────────────────────────────────────────────────────────
+function build(){
+  while(geomGrp.children.length)geomGrp.remove(geomGrp.children[0]);
+
+  const {A,P,B}=state;
+
+  // A — make, scale, flip, twist
+  const shpA=makeShape(A,WY);
+  const vAs=applyScale(shpA.verts,WY,scaleW.A,scaleH.A);
+  const vAf=applyFlip(vAs,WY,flipState.A.x,flipState.A.y);
+  const vA=applyTwist(vAf,twistA);
+  const eA=shpA.edges;
+
+  // B — make, scale, flip, twist
+  const shpB=makeShape(B,-WY);
+  const vBs=applyScale(shpB.verts,-WY,scaleW.B,scaleH.B);
+  const vBf=applyFlip(vBs,-WY,flipState.B.x,flipState.B.y);
+  const vB=applyTwist(vBf,twistB);
+  const eB=shpB.edges;
+
+  // P — make, scale, flip
+  let vP,eP;
+  {
+    const shpP=makeShape(P,0);
+    const vPs=applyScale(shpP.verts,0,scaleW.P,scaleH.P);
+    vP=applyFlip(vPs,0,flipState.P.x,flipState.P.y);
+    eP=shpP.edges;
+  }
+
+  const dotR=n=>n===1?0.18:0.10;
+
+  // Draw A
+  vA.forEach(v=>geomGrp.add(mkDot(v,0xa8d8ea,dotR(vA.length))));
+  eA.forEach(([i,j])=>geomGrp.add(mkLine(vA[i],vA[j],0xa8d8ea,0.85)));
+
+  // Draw P — normal or flattened
+  if(showFlatP){
+    // Project all P verts flat to y=0
+    const flatV=vP.map(v=>v3(v.x,0,v.z));
+
+    // Deduplicate close XZ points
+    const MERGE=0.08;
+    const uniq=[];
+    const remap=flatV.map(v=>{
+      const f=uniq.findIndex(u=>Math.sqrt((u.x-v.x)**2+(u.z-v.z)**2)<MERGE);
+      if(f>=0)return f;
+      uniq.push(v);return uniq.length-1;
+    });
+
+    // Draw all edges projected flat — shows full internal triangle framework
+    const drawn=new Set();
+    eP.forEach(([i,j])=>{
+      const ri=remap[i],rj=remap[j];
+      if(ri===rj)return;
+      const key=`${Math.min(ri,rj)}_${Math.max(ri,rj)}`;
+      if(drawn.has(key))return;
+      drawn.add(key);
+      geomGrp.add(mkLine(uniq[ri],uniq[rj],0xf0c040,0.75));
+    });
+
+    // Dots at each unique flat vert
+    uniq.forEach(v=>geomGrp.add(mkDot(v,0xf0c040,0.09)));
+
+    // Convex hull outline on top — bright so the 2D shape reads clearly
+    const flat2d=uniq.map(v=>({x:v.x,z:v.z}));
+    function hull2d(pts){
+      if(pts.length<3)return pts;
+      let pivot=pts.reduce((a,b)=>b.z<a.z||(b.z===a.z&&b.x<a.x)?b:a);
+      const cross=(O,A,B)=>(A.x-O.x)*(B.z-O.z)-(A.z-O.z)*(B.x-O.x);
+      const sorted=pts.filter(p=>p!==pivot).sort((a,b)=>{
+        const da=Math.atan2(a.z-pivot.z,a.x-pivot.x),db=Math.atan2(b.z-pivot.z,b.x-pivot.x);
+        return Math.abs(da-db)<1e-9?((a.x-pivot.x)**2+(a.z-pivot.z)**2)-((b.x-pivot.x)**2+(b.z-pivot.z)**2):da-db;
+      });
+      const hull=[pivot];
+      for(const p of sorted){while(hull.length>=2&&cross(hull[hull.length-2],hull[hull.length-1],p)<=0)hull.pop();hull.push(p);}
+      return hull;
+    }
+    const outline=hull2d(flat2d);
+    if(outline.length>=3){
+      const pts3d=[...outline.map(p=>v3(p.x,0,p.z)),v3(outline[0].x,0,outline[0].z)];
+      geomGrp.add(new THREE.Line(
+        new THREE.BufferGeometry().setFromPoints(pts3d),
+        new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.5})
+      ));
+    }
+  } else {
+    vP.forEach(v=>geomGrp.add(mkDot(v,0xf0c040,dotR(vP.length))));
+    eP.forEach(([i,j])=>geomGrp.add(mkLine(vP[i],vP[j],0xf0c040,0.82)));
+  }
+
+  // Draw B
+  vB.forEach(v=>geomGrp.add(mkDot(v,0x7ec8a0,dotR(vB.length))));
+  eB.forEach(([i,j])=>geomGrp.add(mkLine(vB[i],vB[j],0x7ec8a0,0.85)));
+
+  // Framing
+  if(showFraming){
+    buildFraming(vA,vP,vB).forEach(({a,b,col,op})=>geomGrp.add(mkLine(a,b,col,op)));
+  }
+
+  const [nm,sub]=getNames(A,P,B);
+  document.getElementById('shape-name').textContent=nm;
+  document.getElementById('shape-sub').textContent=sub;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  ICO CORRIDOR — 4-layer icosahedron by the Forge method
+//  TOP POLE → UPPER RING → LOWER RING → BOT POLE
+//  Each layer is a plane in the corridor. Edges connect between layers.
+// ─────────────────────────────────────────────────────────────────────────
+let icoMode = false;
+function toggleIcoMode(){
+  icoMode = !icoMode;
+  const btn = document.getElementById('btn-ico');
+  btn.classList.toggle('on', icoMode);
+  btn.style.borderColor = icoMode ? '#c084fc' : '#c084fc66';
+  btn.style.color       = icoMode ? '#c084fc' : '#c084fc99';
+  if(icoMode) drawIcoCorridor();
+  else build();
+}
+
+function drawIcoCorridor(){
+  while(geomGrp.children.length) geomGrp.remove(geomGrp.children[0]);
+
+  const rr = R*1.05;
+  // 4 Y levels spaced across the full corridor
+  const yT  =  WY * 1.00;   // top pole
+  const yU  =  WY * 0.33;   // upper ring
+  const yL  = -WY * 0.33;   // lower ring
+  const yB  = -WY * 1.00;   // bot pole
+
+  const PI2 = Math.PI*2, a0 = Math.PI/2, a1 = Math.PI/2 + Math.PI/5;
+
+  // Build the 4 layers
+  const top  = [v3(0, yT, 0)];
+  const uRing = [0,1,2,3,4].map(i => v3(Math.cos(a0+PI2*i/5)*rr, yU, Math.sin(a0+PI2*i/5)*rr));
+  const lRing = [0,1,2,3,4].map(i => v3(Math.cos(a1+PI2*i/5)*rr, yL, Math.sin(a1+PI2*i/5)*rr));
+  const bot  = [v3(0, yB, 0)];
+
+  const COL_T  = 0xf9a8d4;  // pink  — top pole layer
+  const COL_U  = 0xc084fc;  // violet — upper ring
+  const COL_L  = 0xa5b4fc;  // indigo — lower ring
+  const COL_B  = 0x7ec8a0;  // green  — bot pole layer
+  const COL_E  = 0xffffff;  // white  — between-layer edges
+
+  // Draw layer dots
+  geomGrp.add(mkDot(top[0],  COL_T, 0.16));
+  uRing.forEach(v => geomGrp.add(mkDot(v, COL_U, 0.11)));
+  lRing.forEach(v => geomGrp.add(mkDot(v, COL_L, 0.11)));
+  geomGrp.add(mkDot(bot[0],  COL_B, 0.16));
+
+  // Draw within-ring edges
+  for(let i=0;i<5;i++) geomGrp.add(mkLine(uRing[i], uRing[(i+1)%5], COL_U, 0.80));
+  for(let i=0;i<5;i++) geomGrp.add(mkLine(lRing[i], lRing[(i+1)%5], COL_L, 0.80));
+
+  // TOP → upper ring (5 spokes)
+  uRing.forEach(v => geomGrp.add(mkLine(top[0], v, COL_E, 0.50)));
+
+  // Upper ↔ lower zigzag (10 edges — the diagonal faces)
+  // Each upper vert connects to the lower vert at same index AND previous index
+  for(let i=0;i<5;i++){
+    geomGrp.add(mkLine(uRing[i], lRing[i],           COL_E, 0.50));
+    geomGrp.add(mkLine(uRing[i], lRing[(i+4)%5],     COL_E, 0.50));
+  }
+
+  // Lower ring → BOT (5 spokes)
+  lRing.forEach(v => geomGrp.add(mkLine(bot[0], v, COL_E, 0.50)));
+
+  // Framing guide lines (show corridor structure)
+  if(showFraming){
+    uRing.forEach(v => geomGrp.add(mkLine(top[0], v, COL_T, 0.12)));
+    lRing.forEach(v => geomGrp.add(mkLine(bot[0], v, COL_B, 0.12)));
+  }
+
+  document.getElementById('shape-name').textContent = 'ICO CORRIDOR';
+  document.getElementById('shape-sub').textContent  = '4 planes · top→upper(5)→lower(5)→bot · 12 verts 30 edges';
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  PANEL
+// ─────────────────────────────────────────────────────────────────────────
+const PLANE_COLS_HEX={A:'#a8d8ea',P:'#f0c040',B:'#7ec8a0'};
+
+function buildPanel(){
+  ['A','P','B'].forEach(pid=>{
+    const col=PLANE_COLS_HEX[pid];
+    const row=document.getElementById('btns-'+pid);
+    row.innerHTML='';
+    SHAPES.forEach(sd=>{
+      const active=state[pid]===sd.id;
+      const btn=document.createElement('button');
+      btn.className='shp-btn'+(active?' active':'');
+      btn.textContent=sd.label;
+      btn.style.color=active?col:'#2a3d50';
+      btn.style.borderColor=active?col+'55':'#111a24';
+      btn.onclick=()=>{
+        if(pid==='A'&&state.A!==sd.id){twistA=0;}
+        if(pid==='B'&&state.B!==sd.id){twistB=0;}
+        state[pid]=sd.id;
+        buildPanel();
+        build();
+      };
+      row.appendChild(btn);
+    });
+  });
+
+  // Sync flip buttons
+  ['A','P','B'].forEach(pid=>{
+    const col=PLANE_COLS_HEX[pid];
+    ['x','y'].forEach(ax=>{
+      const btn=document.getElementById(`flip${ax.toUpperCase()}-${pid}`);
+      if(!btn)return;
+      const on=flipState[pid][ax];
+      btn.style.color=on?col:'#'+col.slice(1)+'44';
+      btn.classList.toggle('active',on);
+    });
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  TWIST ROWS — A and B, same snap logic keyed by their respective shapes
+// ─────────────────────────────────────────────────────────────────────────
+function buildTwistRows(){
+  buildOneTwistRow('A', state.A, twistA, '#a8d8ea',
+    deg=>{twistA=deg; buildTwistRows(); build();});
+  buildOneTwistRow('B', state.B, twistB, '#7ec8a0',
+    deg=>{twistB=deg; buildTwistRows(); build();});
+}
+
+function buildOneTwistRow(plane, shape, current, activeCol, onSnap){
+  const row=document.getElementById('twist-row-'+plane);
+  row.innerHTML='';
+  const snaps=TWIST_SNAPS[shape]||[0];
+  snaps.forEach(deg=>{
+    const btn=document.createElement('button');
+    btn.className='ctrl-btn';
+    btn.textContent=Number.isInteger(deg)?deg+'°':Math.round(deg)+'°';
+    btn.style.padding='5px 8px';
+    btn.style.fontSize='8px';
+    const active=Math.abs(current-deg)<0.1;
+    if(active){btn.style.borderColor=activeCol;btn.style.color=activeCol;}
+    btn.onclick=()=>onSnap(deg);
+    row.appendChild(btn);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  TOGGLES
+// ─────────────────────────────────────────────────────────────────────────
+function toggleFlip(plane,axis){
+  flipState[plane][axis]=!flipState[plane][axis];
+  buildPanel();
+  build();
+}
+function toggleFlatP(){
+  showFlatP=!showFlatP;
+  const btn=document.getElementById('btn-flatp');
+  btn.classList.toggle('on',showFlatP);
+  btn.style.borderColor=showFlatP?'#f0c040':'#f0c04044';
+  btn.style.color=showFlatP?'#f0c040':'#f0c04066';
+  build();
+}
+function toggleFraming(){
+  showFraming=!showFraming;
+  const btn=document.getElementById('btn-frame');
+  btn.textContent='FRAMING'+(showFraming?'':' OFF');
+  btn.classList.toggle('on',showFraming);
+  if(icoMode) drawIcoCorridor(); else build();
+}
+function toggleParticles(){
+  showParticles=!showParticles;
+  particleMesh.visible=showParticles;
+  const btn=document.getElementById('btn-pulse');
+  btn.textContent='PULSE'+(showParticles?'':' OFF');
+  btn.classList.toggle('on',showParticles);
+}
+function togglePause(){
+  paused=!paused;
+  document.getElementById('btn-pause').textContent=paused?'RESUME':'PAUSE';
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  HTML LABELS
+// ─────────────────────────────────────────────────────────────────────────
+function mkLbl(text,col){
+  const el=document.createElement('div');
+  el.className='layer-lbl';el.textContent=text;el.style.color=col;
+  document.body.appendChild(el);return el;
+}
+const lblA=mkLbl('A','#a8d8ea');
+const lblP=mkLbl('P','#f0c040');
+const lblB=mkLbl('B','#7ec8a0');
+const lblW=mkLbl('W','#1a5070');
+
+function project(vec){
+  const v=vec.clone().project(camera);
+  return{x:(v.x*.5+.5)*window.innerWidth,y:(-v.y*.5+.5)*window.innerHeight};
+}
+function placeLabel(el,y,ox=14){
+  const p=project(v3(2.6,y,0));
+  el.style.left=(p.x+ox)+'px';el.style.top=(p.y-9)+'px';
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+buildCorridor();
+buildPanel();
+build();
+
+// ── Animate ───────────────────────────────────────────────────────────────
+let t=0;
+function animate(){
+  requestAnimationFrame(animate);
+  if(!paused){
+    t+=0.016;
+    if(!drag&&!tp)sph.theta+=0.0022;
+    for(let i=0;i<PC;i++){
+      pPos[i*3+1]+=pVel[i];
+      pPos[i*3]+=Math.sin(t*2+pPhase[i])*.002;
+      pPos[i*3+2]+=Math.cos(t*1.7+pPhase[i])*.002;
+      if(pPos[i*3+1]>6){pPos[i*3+1]=-6;pPos[i*3]=(Math.random()-.5)*5;pPos[i*3+2]=(Math.random()-.5)*5;}
+    }
+    pGeo.attributes.position.needsUpdate=true;
+    pMat.opacity=0.4+0.22*Math.sin(t*3);
+  }
+  camera.position.set(
+    sph.r*Math.sin(sph.phi)*Math.sin(sph.theta),
+    sph.r*Math.cos(sph.phi),
+    sph.r*Math.sin(sph.phi)*Math.cos(sph.theta)
+  );
+  camera.lookAt(0,0,0);
+  placeLabel(lblA,WY);
+  placeLabel(lblP,0);
+  placeLabel(lblB,-WY);
+  placeLabel(lblW,5.6,8);
+  renderer.render(scene,camera);
+}
+window.addEventListener('resize',()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+animate();
+
+// ─────────────────────────────────────────────────────────────────────────
+//  METRICS — computed after every build()
+// ─────────────────────────────────────────────────────────────────────────
+function computeMetrics(vA,eA,vP,eP,vB,eB){
+  const totalV=vA.length+vP.length+vB.length;
+  const totalE=eA.length+eP.length+eB.length;
+
+  // Dimension hint: 0=point, 1=line, 2=polygon/flat, 3=polyhedral
+  const dimA=DIM[state.A]??2, dimB=DIM[state.B]??2, dimP=DIM[state.P]??2;
+  const maxDim=Math.max(typeof dimP==='number'?dimP:0, dimA, dimB);
+  const dimLabel=['0D','1D','2D','3D','4D'][Math.min(maxDim,4)];
+
+  // Symmetry score: count how many A verts have a matching B vert within XZ threshold
+  let symCount=0;
+  if(vA.length>0&&vB.length>0){
+    const refR=vA.reduce((s,v)=>s+Math.sqrt(v.x*v.x+v.z*v.z),0)/vA.length;
+    vA.forEach(a=>{
+      const bestD=vB.reduce((bd,b)=>{
+        const dx=a.x-b.x,dz=a.z-b.z;return Math.min(bd,Math.sqrt(dx*dx+dz*dz));
+      },Infinity);
+      if(bestD<0.35)symCount++;
+    });
+  }
+  const symScore=vA.length>0?Math.round(symCount/vA.length*100):0;
+  const symLabel=symScore===100?'PERFECT':symScore>70?'HIGH':symScore>30?'PARTIAL':'LOW';
+
+  document.getElementById('m-v').textContent=totalV;
+  document.getElementById('m-e').textContent=totalE;
+  document.getElementById('m-d').textContent=dimLabel;
+  const ms=document.getElementById('m-s');
+  ms.textContent=symLabel;
+  ms.className='met-val'+(symScore===100?' hi':'');
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Override build() to also compute metrics
+// ─────────────────────────────────────────────────────────────────────────
+const _origBuild=build;
+build=function(){
+  _origBuild();
+  // Re-compute from state (build already ran, verts are live)
+  const {A,P,B}=state;
+  const sA=makeShape(A,WY); const vAf=applyFlip(sA.verts,WY,flipState.A.x,flipState.A.y); const vAc=applyTwist(vAf,twistA);
+  const sB=makeShape(B,-WY); const vBf=applyFlip(sB.verts,-WY,flipState.B.x,flipState.B.y);
+  const vBc=applyTwist(vBf,twistB);
+  let vPc,ePc;
+  const sp=makeShape(P,0);vPc=applyFlip(sp.verts,0,flipState.P.x,flipState.P.y);ePc=sp.edges;
+  computeMetrics(vAc,sA.edges,vPc,ePc,vBc,sB.edges);
+};
+
+// ─────────────────────────────────────────────────────────────────────────
+//  DISCOVERY ENGINE
+// ─────────────────────────────────────────────────────────────────────────
+let discLog=[];
+let exploring=false, explorePaused=false, exploreTimer=null, exploreQueue=[], exploreIdx=0;
+let expSpeed=1200;
+
+const TAG_COL={NAMED:'#f0c040',SYMMETRIC:'#a8d8ea',EMERGENT:'#7ec8a0',SAVED:'#e0a060',COLLAPSE:'#e06060'};
+
+function toggleDisc(){
+  const p=document.getElementById('disc-panel');
+  const btn=document.getElementById('disc-toggle');
+  const open=p.classList.toggle('open');
+  btn.classList.toggle('open',open);
+  btn.textContent=open?'✕ CLOSE':'◈ DISCOVER';
+}
+
+// ── Build the full sweep queue ─────────────────────────────────────────────
+function buildSweepQueue(){
+  const queue=[];
+
+  // 1. All named combos
+  Object.keys(NAMES).forEach(key=>{
+    const [a,p,b]=key.split(':');
+    const [nm,sub]=NAMES[key];
+    const tags=['NAMED'];
+    // Extra tag: symmetric if A===B
+    if(a===b)tags.push('SYMMETRIC');
+    queue.push({type:'named',a,p,b,twist:0,name:nm,sub,tags});
+  });
+
+  // 2. Flip variants of key named combos
+  const flipCombos=[
+    {a:'tet',p:'pt',b:'tet',fx:false,fy:true},
+    {a:'oct',p:'pt',b:'oct',fx:true,fy:false},
+    {a:'cube',p:'pt',b:'cube',fx:false,fy:true},
+    {a:'tet',p:'oct',b:'tet',fx:false,fy:true},
+  ];
+  flipCombos.forEach(({a,p,b,fx,fy})=>{
+    const key=`${a}:${p}:${b}`;
+    const base=NAMES[key]?NAMES[key][0]:`${a}·${p}·${b}`;
+    queue.push({type:'flip',a,p,b,twist:0,flipA:{x:false,y:fy},flipB:{x:fx,y:false},
+      name:`${base} · ${fy?'Y-FLIP':'X-FLIP'}`,
+      sub:`flipped variant of ${base}`,tags:['SYMMETRIC']});
+  });
+
+  return queue;
+}
+
+// ── Apply a queue entry to the live state ─────────────────────────────────
+function applyEntry(entry){
+  state.A=entry.a; state.P=entry.p; state.B=entry.b;
+  twistA=entry.twistA||0;
+  twistB=entry.twistB||entry.twist||0;
+  if(entry.flipA){flipState.A.x=entry.flipA.x||false;flipState.A.y=entry.flipA.y||false;}
+  else{flipState.A.x=false;flipState.A.y=false;}
+  if(entry.flipB){flipState.B.x=entry.flipB.x||false;flipState.B.y=entry.flipB.y||false;}
+  else{flipState.B.x=false;flipState.B.y=false;}
+  flipState.P.x=false;flipState.P.y=false;
+  buildPanel();buildTwistRows();build();
+}
+
+// ── Run sweep ──────────────────────────────────────────────────────────────
+function runSweep(){
+  if(exploring){stopExplore();return;}
+  exploreQueue=buildSweepQueue();
+  exploreIdx=0;exploring=true;explorePaused=false;
+  document.getElementById('d-sweep').textContent='■ STOP SWEEP';
+  document.getElementById('d-sweep').classList.add('active');
+  document.getElementById('d-pause-exp').style.display='';
+  document.getElementById('d-stop').style.display='none';
+  stepExplore();
+}
+
+function stepExplore(){
+  if(!exploring||explorePaused)return;
+  if(exploreIdx>=exploreQueue.length){stopExplore();return;}
+  const entry=exploreQueue[exploreIdx];
+  applyEntry(entry);
+  // Log it
+  logEntry({...entry,idx:exploreIdx,total:exploreQueue.length});
+  // Progress bar
+  document.getElementById('disc-prog-bar').style.width=((exploreIdx+1)/exploreQueue.length*100)+'%';
+  exploreIdx++;
+  exploreTimer=setTimeout(stepExplore,expSpeed);
+}
+
+function toggleExplore(){
+  if(!exploring)return;
+  explorePaused=!explorePaused;
+  const btn=document.getElementById('d-pause-exp');
+  btn.textContent=explorePaused?'▶ RESUME':'❙❙ PAUSE';
+  if(!explorePaused)stepExplore();
+}
+
+function stopExplore(){
+  exploring=false;explorePaused=false;
+  if(exploreTimer)clearTimeout(exploreTimer);
+  document.getElementById('d-sweep').textContent='▶ AUTO SWEEP';
+  document.getElementById('d-sweep').classList.remove('active');
+  document.getElementById('d-pause-exp').style.display='none';
+  document.getElementById('d-stop').style.display='none';
+  document.getElementById('d-pause-exp').textContent='❙❙ PAUSE';
+  document.getElementById('disc-prog-bar').style.width='0%';
+}
+
+function setExpSpeed(ms){
+  expSpeed=ms;
+  ['ds-s','ds-m','ds-f'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  if(ms===2200)document.getElementById('ds-s').classList.add('active');
+  else if(ms===1200)document.getElementById('ds-m').classList.add('active');
+  else document.getElementById('ds-f').classList.add('active');
+}
+
+// ── Save current state ─────────────────────────────────────────────────────
+function saveCurrentState(){
+  const {A,P,B}=state;
+  const key=`${A}:${P}:${B}`;
+  const base=NAMES[key]||['—',`${A}·${P}·${B}`];
+  const twist=twistB, twA=twistA;
+  const entry={
+    a:A,p:P,b:B,twistA:twA,twistB:twist,
+    flipA:{...flipState.A},flipB:{...flipState.B},
+    name:base[0]+'  ★',
+    sub:base[1]+` · A=${twA}° B=${twist}° · saved`,
+    tags:['SAVED'],
+    saved:true
+  };
+  logEntry(entry,true);
+}
+
+// ── Log entry ──────────────────────────────────────────────────────────────
+function logEntry(entry,prepend=false){
+  // Keep max 60 entries
+  if(prepend){discLog.unshift(entry);}else{discLog.push(entry);}
+  if(discLog.length>60)discLog.length=60;
+  renderDiscLog();
+  // Flash the newest entry if prepend
+  if(prepend){
+    const el=document.querySelector('.d-entry');
+    if(el){el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),900);}
+  }
+  // If auto-sweep, scroll log to latest
+  if(exploring&&!prepend){
+    const log=document.getElementById('disc-log');
+    log.scrollTop=log.scrollHeight;
+  }
+}
+
+// ── Render log ─────────────────────────────────────────────────────────────
+function renderDiscLog(){
+  const el=document.getElementById('disc-log');
+  if(!discLog.length){
+    el.innerHTML='<div class="d-empty">RUN AUTO SWEEP OR<br>SAVE A STATE<br><br>DISCOVERIES APPEAR HERE</div>';
+    return;
+  }
+  el.innerHTML=discLog.map((e,i)=>{
+    const tags=(e.tags||[]).map(t=>`<span class="d-tag" style="color:${TAG_COL[t]||'#1a3040'};border-color:${TAG_COL[t]||'#1a3040'}55">${t}</span>`).join('');
+    return `<div class="d-entry${e.saved?' saved':''}" onclick="applyDisc(${i})">
+      <div class="d-name">${e.name}</div>
+      <div class="d-sub">${e.sub}</div>
+      <div style="margin-top:3px">${tags}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Apply a logged entry back to the scene ─────────────────────────────────
+function applyDisc(idx){
+  const e=discLog[idx];if(!e)return;
+  applyEntry(e);
+  // Highlight
+  const entries=document.querySelectorAll('.d-entry');
+  entries.forEach((el,i)=>{
+    el.classList.toggle('flash',i===idx);
+    if(i===idx)setTimeout(()=>el.classList.remove('flash'),800);
+  });
+}
+
+</script>
+</body>
+</html>
