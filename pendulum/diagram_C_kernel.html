@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagram C — Formal Kernel</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@300;400&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #fafaf7;
+    --rule: #1a1a18;
+    --muted: #888880;
+    --very-dim: #c8c8c0;
+    --accent: #2244aa;
+    --red: #8822aa;
+    --green: #226644;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--rule);
+    font-family: 'EB Garamond', Georgia, serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .poster {
+    width: 780px;
+  }
+
+  /* Strict typographic header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 2px solid var(--rule);
+    padding-bottom: 14px;
+    margin-bottom: 48px;
+  }
+
+  .label-c {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 300;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .header-title {
+    font-size: 32px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+
+  .header-sub {
+    font-size: 14px;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 4px;
+  }
+
+  .version-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--very-dim);
+    letter-spacing: 1px;
+    text-align: right;
+    line-height: 2;
+  }
+
+  /* ─── Three-column layout ─── */
+  .columns {
+    display: grid;
+    grid-template-columns: 1fr 2px 1fr 2px 1fr;
+    gap: 0;
+    margin-bottom: 48px;
+    align-items: start;
+  }
+
+  .col-divider {
+    background: var(--very-dim);
+    align-self: stretch;
+    margin: 0 24px;
+  }
+
+  .col {
+    padding: 0 4px;
+  }
+
+  .col-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .col-label::before {
+    content: '';
+    display: inline-block;
+    width: 16px;
+    height: 1px;
+    background: var(--very-dim);
+  }
+
+  /* Equation display */
+  .eq-block {
+    margin-bottom: 28px;
+  }
+
+  .eq-line {
+    font-size: 20px;
+    line-height: 1.8;
+    letter-spacing: 0.2px;
+  }
+
+  .eq-line sub {
+    font-size: 13px;
+  }
+
+  .eq-line sup {
+    font-size: 13px;
+  }
+
+  .eq-comment {
+    font-size: 12px;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 6px;
+    line-height: 1.6;
+    padding-left: 12px;
+    border-left: 2px solid var(--very-dim);
+  }
+
+  .key-result {
+    margin-top: 24px;
+    padding: 14px 16px;
+    border: 1px solid var(--rule);
+    background: rgba(34,68,170,0.03);
+  }
+
+  .key-result-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .key-result-eq {
+    font-size: 18px;
+    line-height: 2;
+    color: var(--accent);
+  }
+
+  /* ─── Phase diagram ─── */
+  .diagram-wrap {
+    margin-bottom: 48px;
+    border-top: 1px solid var(--very-dim);
+    border-bottom: 1px solid var(--very-dim);
+    padding: 32px 0;
+  }
+
+  /* ─── Conditions table ─── */
+  .conditions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+    border-top: 2px solid var(--rule);
+    border-bottom: 1px solid var(--very-dim);
+    margin-bottom: 32px;
+  }
+
+  .cond-item {
+    padding: 18px 20px;
+    border-right: 1px solid var(--very-dim);
+  }
+  .cond-item:last-child { border-right: none; }
+
+  .cond-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .cond-eq {
+    font-size: 17px;
+    line-height: 1.9;
+    color: var(--rule);
+  }
+
+  .cond-note {
+    font-size: 11px;
+    color: var(--muted);
+    font-style: italic;
+    margin-top: 8px;
+    line-height: 1.6;
+  }
+
+  /* Footer */
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .footer-quote {
+    font-size: 18px;
+    font-style: italic;
+    color: var(--rule);
+    line-height: 1.5;
+    max-width: 460px;
+  }
+
+  .footer-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--very-dim);
+    text-align: right;
+    line-height: 2;
+    letter-spacing: 0.5px;
+  }
+</style>
+</head>
+<body>
+
+<div class="poster">
+
+  <div class="header">
+    <div>
+      <div class="label-c">Diagram C — Formalism</div>
+      <div class="header-title">The Kernel</div>
+      <div class="header-sub">Constraint · self-duality · turning points</div>
+    </div>
+    <div class="version-tag">
+      Pendulum Cosmology v4<br>
+      purely classical · kinematical<br>
+      FLRW minisuperspace
+    </div>
+  </div>
+
+  <!-- Three columns: Hamiltonian / Self-Duality / Turning Points -->
+  <div class="columns">
+
+    <!-- Col 1: Hamiltonian Constraint -->
+    <div class="col">
+      <div class="col-label">I. Constraint</div>
+      <div class="eq-block">
+        <div class="eq-line">ȧ² = F(a)</div>
+        <div class="eq-comment">the single equation governing all dynamics</div>
+      </div>
+      <div class="eq-block">
+        <div class="eq-line" style="font-size:16px;">
+          F(a) =
+          <span style="font-size:14px;">
+            <sup>8πGK</sup>&frasl;<sub>3</sub>
+          </span>
+          · <sup>aⁿ</sup>&frasl;<sub>aⁿ+1</sub>
+          + <sup>Λ</sup>&frasl;<sub>3</sub> · a²
+        </div>
+        <div class="eq-comment">
+          K &gt; 0 · Λ &lt; 0 · a(t) &gt; 0<br>
+          First term: self-dual density<br>
+          Second term: confining Λ
+        </div>
+      </div>
+      <div class="key-result">
+        <div class="key-result-label">Non-negotiable</div>
+        <div style="font-size:13px; color:var(--muted); font-style:italic; line-height:1.8;">
+          These signs are not tunable.<br>
+          They are the mechanism.
+        </div>
+      </div>
+    </div>
+
+    <div class="col-divider"></div>
+
+    <!-- Col 2: Self-Duality -->
+    <div class="col">
+      <div class="col-label">II. Self-Duality</div>
+      <div class="eq-block">
+        <div class="eq-line" style="color:var(--accent);">ρ(1/a) = ρ(a)</div>
+        <div class="eq-comment">the density is symmetric about a = 1</div>
+      </div>
+      <div class="eq-block" style="margin-top:16px;">
+        <div style="font-size:14px; color:var(--muted); font-style:italic; margin-bottom:12px;">
+          What this forces:
+        </div>
+        <div class="eq-line" style="font-size:18px; color: var(--accent);">
+          a<sub>min</sub> · a<sub>max</sub> = 1
+        </div>
+        <div class="eq-comment" style="margin-top:8px;">
+          The bounce scale and the maximum scale are reciprocals of each other.<br>
+          Not a choice — a consequence.
+        </div>
+      </div>
+      <div style="margin-top: 24px; padding:14px; border: 1px solid var(--very-dim);">
+        <div class="eq-line" style="font-size:14px; line-height:2; color:var(--muted);">
+          ρ<sub>max</sub> = K/2 at a = 1
+        </div>
+        <div style="font-size:11px; color: var(--very-dim); font-style:italic; margin-top:4px;">
+          peak density at the self-dual point
+        </div>
+      </div>
+    </div>
+
+    <div class="col-divider"></div>
+
+    <!-- Col 3: Turning Points -->
+    <div class="col">
+      <div class="col-label">III. Turning Points</div>
+      <div class="eq-block">
+        <div class="eq-line" style="font-size:17px;">F(a<sub>min</sub>) = 0</div>
+        <div class="eq-comment">bounce — expansion begins</div>
+      </div>
+      <div class="eq-block">
+        <div class="eq-line" style="font-size:17px;">F(a<sub>max</sub>) = 0</div>
+        <div class="eq-comment">turnaround — contraction begins</div>
+      </div>
+      <div style="margin-top:20px;">
+        <div style="font-size:13px; color:var(--muted); font-style:italic; line-height:1.6; margin-bottom:12px;">
+          Cycle period:
+        </div>
+        <div class="eq-line" style="font-size:16px;">
+          T = 2∫<sub>a<sub>min</sub></sub><sup>a<sub>max</sub></sup>
+          <sup>da</sup>&frasl;<sub>√F(a)</sub>
+        </div>
+      </div>
+      <div class="key-result" style="margin-top:20px; border-color: var(--green); background: rgba(34,102,68,0.03);">
+        <div class="key-result-label" style="color:var(--green);">Lemma 1</div>
+        <div style="font-size:12px; color:var(--muted); font-style:italic; line-height:1.7;">
+          Cyclic orbits are generic.<br>
+          Eternal expansion requires<br>
+          fine-tuning.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Phase portrait SVG -->
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrowBlue" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+          <path d="M0,0.5 L0,6.5 L7,3.5 z" fill="#2244aa"/>
+        </marker>
+        <marker id="arrowBlueL" markerWidth="7" markerHeight="7" refX="2" refY="3.5" orient="auto">
+          <path d="M7,0.5 L7,6.5 L0,3.5 z" fill="#2244aa"/>
+        </marker>
+        <marker id="arrowGray" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L7,3 z" fill="#888880"/>
+        </marker>
+      </defs>
+
+      <!-- Axes -->
+      <line x1="60" y1="200" x2="700" y2="200" stroke="#c8c8c0" stroke-width="1"/>
+      <line x1="60" y1="20" x2="60" y2="210" stroke="#c8c8c0" stroke-width="1"/>
+
+      <!-- Axis labels -->
+      <text x="710" y="204" font-family="'EB Garamond', serif" font-size="15" fill="#888880" font-style="italic">a</text>
+      <text x="44" y="20" font-family="'EB Garamond', serif" font-size="15" fill="#888880" font-style="italic">ȧ</text>
+      <text x="54" y="208" font-family="'EB Garamond', serif" font-size="11" fill="#c8c8c0">0</text>
+
+      <!-- Zero line -->
+      <line x1="62" y1="120" x2="698" y2="120" stroke="#e0e0d8" stroke-width="1" stroke-dasharray="3,6"/>
+
+      <!-- ─── PHASE ORBIT (closed ellipse-like) ─── -->
+      <!-- expanding half (top arc) -->
+      <path d="M 120,120 Q 200,32 380,32 Q 560,32 640,120"
+            fill="none" stroke="#2244aa" stroke-width="2.5"
+            marker-end="url(#arrowBlue)"/>
+      <!-- contracting half (bottom arc) -->
+      <path d="M 640,120 Q 560,208 380,208 Q 200,208 120,120"
+            fill="none" stroke="#2244aa" stroke-width="2.5" stroke-dasharray="8,3"
+            marker-end="url(#arrowBlueL)"/>
+
+      <!-- Turning points -->
+      <circle cx="120" cy="120" r="7" fill="#fafaf7" stroke="#1a1a18" stroke-width="2"/>
+      <circle cx="640" cy="120" r="7" fill="#fafaf7" stroke="#1a1a18" stroke-width="2"/>
+
+      <!-- Labels: turning points -->
+      <text x="120" y="144" text-anchor="middle" font-family="'JetBrains Mono', monospace"
+            font-size="10" fill="#888880">a_min</text>
+      <text x="640" y="144" text-anchor="middle" font-family="'JetBrains Mono', monospace"
+            font-size="10" fill="#888880">a_max</text>
+
+      <!-- Self-dual point -->
+      <line x1="380" y1="108" x2="380" y2="200" stroke="#c8c8c0" stroke-width="1" stroke-dasharray="3,4"/>
+      <circle cx="380" cy="120" r="4" fill="#c8c8c0"/>
+      <text x="380" y="219" text-anchor="middle" font-family="'JetBrains Mono', monospace"
+            font-size="10" fill="#888880">a = 1</text>
+
+      <!-- Labels on arcs -->
+      <text x="280" y="55" text-anchor="middle" font-family="'EB Garamond', serif"
+            font-size="14" fill="#2244aa" font-style="italic">expanding (ȧ > 0)</text>
+      <text x="480" y="190" text-anchor="middle" font-family="'EB Garamond', serif"
+            font-size="14" fill="#2244aa" font-style="italic">contracting (ȧ < 0)</text>
+
+      <!-- Self-duality arrow: a_min ↔ a_max -->
+      <path d="M 150,90 Q 380,60 610,90" fill="none" stroke="#888880" stroke-width="1"
+            stroke-dasharray="3,4" marker-end="url(#arrowGray)"/>
+      <text x="380" y="72" text-anchor="middle" font-family="'EB Garamond', serif"
+            font-size="12" fill="#888880" font-style="italic">a<tspan dy="-3" font-size="9">min</tspan><tspan dy="3"> · a</tspan><tspan dy="-3" font-size="9">max</tspan><tspan dy="3"> = 1</tspan></text>
+
+      <!-- Caption below diagram -->
+      <text x="380" y="232" text-anchor="middle" font-family="'JetBrains Mono', monospace"
+            font-size="9" fill="#c8c8c0" letter-spacing="1">
+        Phase portrait · Λ = −0.8 · closed orbit · a_min · a_max = 1 exactly
+      </text>
+    </svg>
+  </div>
+
+  <!-- Conditions summary -->
+  <div class="conditions">
+    <div class="cond-item">
+      <div class="cond-label">Required signs</div>
+      <div class="cond-eq">K &gt; 0 · Λ &lt; 0</div>
+      <div class="cond-note">Both non-negotiable. Together they guarantee bounded orbits without fine-tuning.</div>
+    </div>
+    <div class="cond-item">
+      <div class="cond-label">Cyclicity condition</div>
+      <div class="cond-eq">max ρ(a) &gt; |Λ| / 8πG</div>
+      <div class="cond-note">The density must exceed the confining threshold. Then the bounce is guaranteed.</div>
+    </div>
+    <div class="cond-item">
+      <div class="cond-label">Global balance</div>
+      <div class="cond-eq">E<sub>total</sub> = 0</div>
+      <div class="cond-note">Zero-energy universe. The framework does not require energy injection from outside.</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-quote">
+      "The sea is not chaos.<br>The sea is a crystal."
+    </div>
+    <div class="footer-meta">
+      Pendulum Cosmology v4<br>
+      Rux Tux · February 2026<br>
+      Classical & kinematical
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,145 @@
+<!--
+  PENDULUM COSMOLOGY — PORTFOLIO CARD
+  Drop this card into your projectlovell.com homepage.
+  
+  Requires in the same directory (or adjust paths):
+  - bendulum_Framework.png  (thumbnail image)
+  - pendulum-cosmology.html (the dedicated page)
+  
+  Add the <style> block to your global CSS, or keep it scoped with a wrapper class.
+-->
+
+<!-- CARD HTML -->
+<a class="project-card" href="pendulum/pendulum-cosmology.html">
+  <div class="card-thumb">
+    <img src="pendulum/bendulum_Framework.png" alt="Pendulum Cosmology Framework">
+    <div class="card-thumb-overlay">
+      <span class="card-thumb-label">View Project</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-eyebrow">Theoretical Cosmology · 2026</div>
+    <h3 class="card-title">Pendulum Cosmology</h3>
+    <p class="card-desc">A cyclic multiverse framework built on a self-dual Hamiltonian constraint. Infinity with rules — a crystal, not chaos.</p>
+    <div class="card-tags">
+      <span>What-If Framework</span>
+      <span>Cyclic Universe</span>
+      <span>CPT Symmetry</span>
+    </div>
+  </div>
+</a>
+
+
+<!-- CARD STYLES -->
+<style>
+  .project-card {
+    display: block;
+    text-decoration: none;
+    background: #080e1c;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-top: 3px solid #e8a135;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-top-color 0.3s;
+    max-width: 380px;
+  }
+
+  .project-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 30px rgba(232,161,53,0.1);
+    border-top-color: #f0b848;
+  }
+
+  .card-thumb {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    background: #04080f;
+  }
+
+  .card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.5s ease, filter 0.3s;
+    filter: brightness(0.85) saturate(0.9);
+  }
+
+  .project-card:hover .card-thumb img {
+    transform: scale(1.04);
+    filter: brightness(1) saturate(1.1);
+  }
+
+  .card-thumb-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(4,8,15,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+
+  .project-card:hover .card-thumb-overlay {
+    opacity: 1;
+  }
+
+  .card-thumb-label {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #e8a135;
+    border: 1px solid #e8a135;
+    padding: 0.5rem 1.2rem;
+  }
+
+  .card-body {
+    padding: 1.5rem;
+  }
+
+  .card-eyebrow {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #7888a0;
+    margin-bottom: 0.5rem;
+  }
+
+  .card-title {
+    font-family: 'Cinzel', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #f0e8d0;
+    margin: 0 0 0.75rem;
+    letter-spacing: 0.03em;
+  }
+
+  .card-desc {
+    font-family: 'Crimson Text', Georgia, serif;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #8090a0;
+    margin: 0 0 1.25rem;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .card-tags span {
+    font-family: 'JetBrains Mono', 'Courier New', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #4a9eff;
+    background: rgba(74,158,255,0.08);
+    border: 1px solid rgba(74,158,255,0.2);
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+  }
+</style>

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagram B — Lattice Structure</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;600&family=IBM+Plex+Serif:ital,wght@0,300;0,400;0,600;1,300&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f14;
+    --grid: #1a1f2e;
+    --dim: #2a3048;
+    --text: #c8ccd8;
+    --text-dim: #5a6080;
+    --plus: #4a9eff;
+    --minus: #ff6b4a;
+    --wall: #f0c040;
+    --accent: #a0e8c0;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .poster {
+    width: 780px;
+    position: relative;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--dim);
+    margin-bottom: 36px;
+  }
+
+  .label-b {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--wall);
+    margin-bottom: 8px;
+  }
+
+  .header-title {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 26px;
+    font-weight: 600;
+    color: #fff;
+    line-height: 1.2;
+  }
+
+  .header-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 6px;
+    letter-spacing: 1px;
+  }
+
+  .header-right {
+    text-align: right;
+  }
+
+  .balance-box {
+    font-size: 11px;
+    color: var(--accent);
+    line-height: 2;
+    border: 1px solid var(--accent);
+    border-opacity: 0.3;
+    padding: 10px 16px;
+    border-radius: 2px;
+    background: rgba(160,232,192,0.05);
+  }
+
+  .balance-box span {
+    color: var(--text-dim);
+    font-size: 10px;
+  }
+
+  /* Diagram */
+  .diagram-wrap {
+    margin-bottom: 28px;
+  }
+
+  svg text {
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* Caption row */
+  .bottom {
+    border-top: 1px solid var(--dim);
+    padding-top: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+  }
+
+  .bottom-item {
+    padding: 14px;
+    border: 1px solid var(--dim);
+    border-radius: 3px;
+    background: rgba(255,255,255,0.02);
+  }
+
+  .bottom-item-label {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .bottom-item-val {
+    font-family: 'IBM Plex Serif', serif;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.6;
+    font-style: italic;
+  }
+
+  .highlight-plus { color: var(--plus); }
+  .highlight-minus { color: var(--minus); }
+  .highlight-wall { color: var(--wall); }
+  .highlight-green { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="poster">
+
+  <div class="header">
+    <div>
+      <div class="label-b">Diagram B — Structure</div>
+      <div class="header-title">The Pairing Lattice</div>
+      <div class="header-sub">τ ∈ ℤ · no preferred origin · every state has a parent</div>
+    </div>
+    <div class="balance-box">
+      <span>four balance laws</span><br>
+      N(+1) = N(−1)<br>
+      #{exp.} = #{cont.}<br>
+      E_total = 0<br>
+      |U(t)| = |L(t)|
+    </div>
+  </div>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 760 480" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrowBlue" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L7,3 z" fill="#4a9eff"/>
+        </marker>
+        <marker id="arrowRed" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L7,3 z" fill="#ff6b4a"/>
+        </marker>
+        <marker id="arrowYellow" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L7,3 z" fill="#f0c040"/>
+        </marker>
+        <marker id="arrowGreen" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L7,3 z" fill="#a0e8c0"/>
+        </marker>
+
+        <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+
+        <filter id="wallGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- Background grid -->
+      <rect width="760" height="480" fill="none"/>
+
+      <!-- Horizontal reference lines -->
+      <line x1="30" y1="120" x2="730" y2="120" stroke="#1a1f2e" stroke-width="1"/>
+      <line x1="30" y1="360" x2="730" y2="360" stroke="#1a1f2e" stroke-width="1"/>
+
+      <!-- Row labels -->
+      <text x="22" y="124" text-anchor="end" font-size="10" fill="#5a6080" letter-spacing="1">a_max</text>
+      <text x="22" y="364" text-anchor="end" font-size="10" fill="#5a6080" letter-spacing="1">a_min</text>
+
+      <!-- Horizontal connector at midpoint -->
+      <line x1="30" y1="240" x2="730" y2="240" stroke="#1e2338" stroke-width="1" stroke-dasharray="2,8"/>
+      <text x="22" y="244" text-anchor="end" font-size="9" fill="#2a3048">a=1</text>
+
+      <!-- ════════════════════════════════════════════ -->
+      <!-- τ AXIS at the bottom -->
+      <line x1="60" y1="430" x2="700" y2="430" stroke="#2a3048" stroke-width="1.5"/>
+      <!-- Ticks and labels -->
+      
+      <!-- Define cycle x-positions -->
+      <!-- τ−2: 110, τ−1: 230, τ: 380, τ+1: 530, τ+2: 650 -->
+
+      <!-- ════════════════════════════════════════════ -->
+      <!-- Cycle τ−2 -->
+      <!-- +1 (blue) expanding: min(110,360) to max(110,120) via arc -->
+      <path d="M 100,360 Q 100,240 110,120" fill="none" stroke="#4a9eff" stroke-width="1.5" opacity="0.35" stroke-dasharray="4,3"/>
+      <!-- −1 (red) contracting: max → min -->
+      <path d="M 120,120 Q 120,240 120,360" fill="none" stroke="#ff6b4a" stroke-width="1.5" opacity="0.35" stroke-dasharray="4,3"/>
+
+      <text x="110" y="450" text-anchor="middle" font-size="11" fill="#2a3048">τ−2</text>
+
+      <!-- ════════════════════════════════════════════ -->
+      <!-- WALL between τ−2 and τ−1 -->
+      <line x1="170" y1="90" x2="170" y2="400" stroke="#f0c040" stroke-width="1" stroke-dasharray="3,4" opacity="0.4"/>
+
+      <!-- ════════════════════════════════════════════ -->
+      <!-- Cycle τ−1 -->
+      <path d="M 180,360 Q 200,240 220,120" fill="none" stroke="#4a9eff" stroke-width="2" opacity="0.55"/>
+      <path d="M 220,120 Q 240,240 240,360" fill="none" stroke="#ff6b4a" stroke-width="2" opacity="0.55" stroke-dasharray="5,3"/>
+
+      <!-- orientation labels τ−1 -->
+      <text x="195" y="200" text-anchor="middle" font-size="9" fill="#4a9eff" opacity="0.8">ε=+1</text>
+      <text x="235" y="200" text-anchor="middle" font-size="9" fill="#ff6b4a" opacity="0.8">ε=−1</text>
+
+      <!-- Dots: max and min for τ−1 -->
+      <circle cx="220" cy="120" r="5" fill="#0d0f14" stroke="#4a9eff" stroke-width="1.5" opacity="0.6"/>
+      <circle cx="240" cy="360" r="5" fill="#0d0f14" stroke="#ff6b4a" stroke-width="1.5" opacity="0.6"/>
+
+      <text x="210" y="450" text-anchor="middle" font-size="11" fill="#3a4060">τ−1</text>
+
+      <!-- ════════════════════════════════════════════ -->
+      <!-- WALL between τ−1 and τ — more prominent -->
+      <line x1="310" y1="80" x2="310" y2="410" stroke="#f0c040" stroke-width="1.5" opacity="0.7" filter="url(#wallGlow)"/>
+      <!-- Wall annotation -->
+      <rect x="286" y="86" width="48" height="18" rx="2" fill="#f0c040" opacity="0.15"/>
+      <text x="310" y="99" text-anchor="middle" font-size="9" fill="#f0c040" letter-spacing="1">WALL</text>
+
+      <!-- Pairing arrow: τ−1 max (+1) → τ min (−1) [diagonal across wall] -->
+      <path d="M 220,120 C 260,155 290,290 360,358" stroke="#a0e8c0" stroke-width="1.5" fill="none"
+            stroke-dasharray="5,3" marker-end="url(#arrowGreen)" opacity="0.7"/>
+      <!-- Label on pairing arrow -->
+      <text x="278" y="248" text-anchor="middle" font-size="9" fill="#a0e8c0" opacity="0.8" 
+            transform="rotate(-52 278 248)">π(i)=j</text>
+
+      <!-- ════════════════════════════════════════════ -->
+      <!-- Cycle τ — OUR CYCLE — FULL emphasis -->
+      <path d="M 320,360 Q 350,240 380,120" fill="none" stroke="#4a9eff" stroke-width="3.5"/>
+      <path d="M 380,120 Q 415,240 440,360" fill="none" stroke="#ff6b4a" stroke-width="3.5"/>
+
+      <!-- Glow dots at endpoints -->
+      <circle cx="320" cy="360" r="9" fill="#4a9eff" opacity="0.2" filter="url(#glow)"/>
+      <circle cx="320" cy="360" r="5" fill="#4a9eff" filter="url(#glow)"/>
+      <!-- bang label -->
+      <text x="320" y="395" text-anchor="middle" font-size="9" fill="#4a9eff">BANG</text>
+
+      <circle cx="380" cy="120" r="9" fill="#f0c040" opacity="0.2"/>
+      <circle cx="380" cy="120" r="5" fill="#f5f0e8" stroke="#1a1008" stroke-width="1.5"/>
+      <text x="380" y="107" text-anchor="middle" font-size="9" fill="#c8ccd8">TURN</text>
+
+      <circle cx="440" cy="360" r="7" fill="#ff6b4a" opacity="0.2"/>
+      <circle cx="440" cy="360" r="4" fill="#ff6b4a"/>
+
+      <!-- τ labels -->
+      <text x="350" y="175" text-anchor="middle" font-size="10" fill="#4a9eff">ε=+1</text>
+      <text x="415" y="175" text-anchor="middle" font-size="10" fill="#ff6b4a">ε=−1</text>
+
+      <!-- τ label -->
+      <text x="380" y="450" text-anchor="middle" font-size="14" fill="#f0c040" font-weight="600">τ</text>
+      <text x="380" y="465" text-anchor="middle" font-size="9" fill="#5a6080" font-style="italic">our cycle</text>
+
+      <!-- ════════════════════════════════════════════ -->
+      <!-- WALL between τ and τ+1 -->
+      <line x1="490" y1="80" x2="490" y2="410" stroke="#f0c040" stroke-width="1.5" opacity="0.7" filter="url(#wallGlow)"/>
+      <rect x="466" y="86" width="48" height="18" rx="2" fill="#f0c040" opacity="0.15"/>
+      <text x="490" y="99" text-anchor="middle" font-size="9" fill="#f0c040" letter-spacing="1">WALL</text>
+
+      <!-- Pairing arrow τ max → τ+1 min -->
+      <path d="M 380,120 C 420,160 465,290 545,358" stroke="#a0e8c0" stroke-width="1.5" fill="none"
+            stroke-dasharray="5,3" marker-end="url(#arrowGreen)" opacity="0.7"/>
+      <text x="455" y="248" text-anchor="middle" font-size="9" fill="#a0e8c0" opacity="0.8"
+            transform="rotate(-52 455 248)">π(i)=j</text>
+
+      <!-- ════════════════════════════════════════════ -->
+      <!-- Cycle τ+1 -->
+      <path d="M 500,360 Q 530,240 560,120" fill="none" stroke="#4a9eff" stroke-width="2" opacity="0.55"/>
+      <path d="M 560,120 Q 590,240 600,360" fill="none" stroke="#ff6b4a" stroke-width="2" opacity="0.55" stroke-dasharray="5,3"/>
+
+      <circle cx="500" cy="360" r="7" fill="#4a9eff" opacity="0.2" filter="url(#glow)"/>
+      <circle cx="500" cy="360" r="4" fill="#4a9eff" opacity="0.7"/>
+      <text x="500" y="395" text-anchor="middle" font-size="9" fill="#4a9eff" opacity="0.7">BANG</text>
+
+      <circle cx="560" cy="120" r="5" fill="#0d0f14" stroke="#c8ccd8" stroke-width="1.5" opacity="0.6"/>
+
+      <text x="530" y="200" text-anchor="middle" font-size="9" fill="#4a9eff" opacity="0.6">ε=+1</text>
+      <text x="585" y="200" text-anchor="middle" font-size="9" fill="#ff6b4a" opacity="0.6">ε=−1</text>
+
+      <text x="548" y="450" text-anchor="middle" font-size="11" fill="#3a4060">τ+1</text>
+
+      <!-- ════════════════════════════════════════════ -->
+      <!-- WALL between τ+1 and τ+2 -->
+      <line x1="640" y1="90" x2="640" y2="400" stroke="#f0c040" stroke-width="1" stroke-dasharray="3,4" opacity="0.4"/>
+
+      <!-- ════════════════════════════════════════════ -->
+      <!-- Cycle τ+2 (partial) -->
+      <path d="M 650,360 Q 665,240 670,120" fill="none" stroke="#4a9eff" stroke-width="1.5" opacity="0.3" stroke-dasharray="4,3"/>
+      <path d="M 670,120 Q 680,240 690,360" fill="none" stroke="#ff6b4a" stroke-width="1.5" opacity="0.3" stroke-dasharray="4,3"/>
+      <text x="665" y="450" text-anchor="middle" font-size="11" fill="#2a3048">τ+2</text>
+
+      <!-- ════════════════════════════════════════════ -->
+      <!-- Extend arrows at edges -->
+      <text x="45" y="243" text-anchor="middle" font-size="18" fill="#2a3048">···</text>
+      <text x="720" y="243" text-anchor="middle" font-size="18" fill="#2a3048">···</text>
+
+      <!-- τ axis arrow -->
+      <line x1="60" y1="430" x2="700" y2="430" stroke="#2a3048" stroke-width="1"/>
+      <text x="730" y="434" font-size="11" fill="#3a4060" font-style="italic">τ</text>
+      <!-- Tick at τ-->
+      <line x1="380" y1="425" x2="380" y2="435" stroke="#f0c040" stroke-width="1.5"/>
+
+      <!-- GLOBAL CONSTRAINT annotation -->
+      <rect x="30" y="26" width="700" height="36" rx="3" fill="rgba(160,232,192,0.05)" stroke="rgba(160,232,192,0.2)" stroke-width="1"/>
+      <text x="380" y="44" text-anchor="middle" font-size="11" fill="#a0e8c0" letter-spacing="0.5">
+        At every wall:  N(ε=+1) = N(ε=−1)  ·  each max paired with exactly one min
+      </text>
+      <text x="380" y="58" text-anchor="middle" font-size="9" fill="#5a6080" letter-spacing="0.5">
+        The global crystal lattice — no corner is first, no corner is last
+      </text>
+
+    </svg>
+  </div>
+
+  <div class="bottom">
+    <div class="bottom-item">
+      <div class="bottom-item-label">Pairing rule</div>
+      <div class="bottom-item-val">
+        π(i) = j<br>
+        requires <span class="highlight-green">ε(j) = −ε(i)</span><br>
+        at every wall
+      </div>
+    </div>
+    <div class="bottom-item">
+      <div class="bottom-item-label">What propagates</div>
+      <div class="bottom-item-val">
+        <span class="highlight-green">Orientation</span> only.<br>
+        Not particles.<br>
+        Not baryon number.
+      </div>
+    </div>
+    <div class="bottom-item">
+      <div class="bottom-item-label">Lemma 3</div>
+      <div class="bottom-item-val">
+        For all τ, ∃ τ−1<br>
+        <span class="highlight-wall">No absolute beginning.</span><br>
+        τ ∈ ℤ
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

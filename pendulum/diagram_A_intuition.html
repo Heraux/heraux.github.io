@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagram A — Intuition</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:ital,wght@0,300;0,400;1,300&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #1a1008;
+    --cream: #f5f0e8;
+    --amber: #c8892a;
+    --rust: #a03020;
+    --muted: #8a7a6a;
+    --wall: #c8892a;
+  }
+
+  body {
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'Source Serif 4', Georgia, serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .poster {
+    width: 780px;
+    position: relative;
+  }
+
+  /* Header */
+  .header {
+    border-top: 3px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
+    padding: 16px 0 12px;
+    margin-bottom: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .label-a {
+    font-family: 'Playfair Display', serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+
+  .header-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 900;
+    line-height: 1.1;
+  }
+
+  .header-sub {
+    font-size: 13px;
+    color: var(--muted);
+    font-style: italic;
+    letter-spacing: 0.5px;
+  }
+
+  /* START HERE arrow */
+  .start-here {
+    position: absolute;
+    top: 90px;
+    left: -100px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--rust);
+    font-size: 11px;
+    font-weight: 400;
+    font-style: italic;
+    letter-spacing: 1px;
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.7; }
+    50% { opacity: 1; }
+  }
+
+  .start-arrow {
+    width: 60px;
+    height: 2px;
+    background: var(--rust);
+    position: relative;
+  }
+  .start-arrow::after {
+    content: '';
+    position: absolute;
+    right: -1px;
+    top: -4px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid var(--rust);
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+  }
+
+  /* SVG diagram area */
+  .diagram-wrap {
+    width: 100%;
+    margin-bottom: 36px;
+  }
+
+  svg {
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+
+  /* Caption */
+  .caption {
+    border-top: 1px solid var(--ink);
+    padding-top: 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .caption-main {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 700;
+    font-style: italic;
+    line-height: 1.3;
+    max-width: 520px;
+    color: var(--ink);
+  }
+
+  .caption-main em {
+    color: var(--rust);
+    font-style: normal;
+  }
+
+  .caption-note {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+    line-height: 1.7;
+    font-style: italic;
+  }
+
+  /* Legend */
+  .legend {
+    margin-top: 28px;
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.3px;
+  }
+
+  .legend-swatch {
+    width: 28px;
+    height: 3px;
+    border-radius: 2px;
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+</style>
+</head>
+<body>
+
+<div class="poster">
+
+  <div class="header">
+    <div class="label-a">Diagram A — Intuition</div>
+    <div class="header-title">The Cyclic Handoff</div>
+    <div class="header-sub">No equations · Pure structure</div>
+  </div>
+
+  <!-- START HERE marker -->
+  <div class="start-here">
+    Start here <div class="start-arrow"></div>
+  </div>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 760 420" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Gradient for expanding arcs -->
+        <linearGradient id="expandGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#c8892a" stop-opacity="0.3"/>
+          <stop offset="50%" stop-color="#c8892a" stop-opacity="1"/>
+          <stop offset="100%" stop-color="#c8892a" stop-opacity="0.3"/>
+        </linearGradient>
+        <linearGradient id="contractGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#a03020" stop-opacity="0.3"/>
+          <stop offset="50%" stop-color="#a03020" stop-opacity="1"/>
+          <stop offset="100%" stop-color="#a03020" stop-opacity="0.3"/>
+        </linearGradient>
+
+        <!-- Glow filter for bang events -->
+        <filter id="bangGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="6" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+
+        <filter id="wallGlow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="3" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+
+        <!-- Arrow markers -->
+        <marker id="arrowAmber" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#c8892a"/>
+        </marker>
+        <marker id="arrowRust" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#a03020"/>
+        </marker>
+        <marker id="arrowMuted" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#8a7a6a"/>
+        </marker>
+      </defs>
+
+      <!-- Background horizontal axis (time reference) -->
+      <line x1="40" y1="210" x2="720" y2="210" stroke="#e8e0d0" stroke-width="1" stroke-dasharray="4,6"/>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- CYCLE τ−1  (left) -->
+      <!-- Expansion arc: lower bounce (x=100) to upper turnaround (x=210) -->
+      <path d="M 100,210 Q 155,70 210,210" 
+            fill="none" stroke="#c8892a" stroke-width="2.5" opacity="0.5"/>
+      <!-- Contraction arc: upper (x=210) to lower bounce (x=320) -->
+      <path d="M 210,210 Q 265,70 320,210" 
+            fill="none" stroke="#a03020" stroke-width="2.5" opacity="0.5" stroke-dasharray="6,3"/>
+
+      <!-- Bounce dot τ−1 -->
+      <circle cx="100" cy="210" r="6" fill="#f5f0e8" stroke="#c8892a" stroke-width="2" opacity="0.5"/>
+      <!-- Turnaround dot τ−1 -->
+      <circle cx="210" cy="70" r="5" fill="#8a7a6a" stroke="#8a7a6a" stroke-width="1.5" opacity="0.5"/>
+
+      <!-- Label: τ−1 -->
+      <text x="155" y="50" text-anchor="middle" font-family="'Playfair Display', serif" 
+            font-size="13" fill="#8a7a6a" font-style="italic" opacity="0.7">τ−1</text>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- WALL EVENT (between τ−1 and τ) -->
+      <line x1="320" y1="60" x2="320" y2="360" stroke="#c8892a" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.6" filter="url(#wallGlow)"/>
+      <!-- Wall label -->
+      <rect x="284" y="290" width="72" height="26" rx="3" fill="#c8892a" opacity="0.12"/>
+      <text x="320" y="307" text-anchor="middle" font-family="'Source Serif 4', serif"
+            font-size="10" fill="#c8892a" letter-spacing="1" font-weight="400">HANDOFF</text>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- CYCLE τ  (centre — OUR CYCLE, emphasised) -->
+      <!-- Expansion arc -->
+      <path d="M 320,210 Q 375,55 440,210" 
+            fill="none" stroke="#c8892a" stroke-width="3.5"/>
+      <!-- Contraction arc -->
+      <path d="M 440,210 Q 505,55 560,210" 
+            fill="none" stroke="#a03020" stroke-width="3.5" stroke-dasharray="7,3"/>
+
+      <!-- BANG event — glowing dot at τ bounce -->
+      <circle cx="320" cy="210" r="10" fill="#c8892a" opacity="0.25" filter="url(#bangGlow)"/>
+      <circle cx="320" cy="210" r="6" fill="#c8892a" filter="url(#bangGlow)"/>
+      <!-- Bang label -->
+      <text x="320" y="245" text-anchor="middle" font-family="'Playfair Display', serif"
+            font-size="12" fill="#c8892a" font-weight="700">BIG BANG</text>
+      <text x="320" y="262" text-anchor="middle" font-family="'Source Serif 4', serif"
+            font-size="10" fill="#8a7a6a" font-style="italic">local observer sees t = 0</text>
+
+      <!-- Turnaround dot τ -->
+      <circle cx="440" cy="58" r="7" fill="#f5f0e8" stroke="#1a1008" stroke-width="2"/>
+
+      <!-- Labels on our cycle arcs -->
+      <text x="375" y="108" text-anchor="middle" font-family="'Playfair Display', serif"
+            font-size="14" fill="#c8892a" font-weight="700">EXPANSION</text>
+      <text x="500" y="108" text-anchor="middle" font-family="'Playfair Display', serif"
+            font-size="14" fill="#a03020" font-weight="700" opacity="0.85">CONTRACTION</text>
+
+      <!-- Turnaround label -->
+      <text x="440" y="40" text-anchor="middle" font-family="'Playfair Display', serif"
+            font-size="12" fill="#1a1008" font-weight="700">TURNAROUND</text>
+
+      <!-- τ label -->
+      <text x="440" y="170" text-anchor="middle" font-family="'Playfair Display', serif"
+            font-size="16" fill="#1a1008" font-style="italic" font-weight="700">τ</text>
+      <text x="440" y="188" text-anchor="middle" font-family="'Source Serif 4', serif"
+            font-size="10" fill="#8a7a6a" font-style="italic">our cycle</text>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- WALL EVENT (between τ and τ+1) -->
+      <line x1="560" y1="60" x2="560" y2="360" stroke="#c8892a" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.6" filter="url(#wallGlow)"/>
+      <rect x="524" y="290" width="72" height="26" rx="3" fill="#c8892a" opacity="0.12"/>
+      <text x="560" y="307" text-anchor="middle" font-family="'Source Serif 4', serif"
+            font-size="10" fill="#c8892a" letter-spacing="1">HANDOFF</text>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- CYCLE τ+1  (right) -->
+      <path d="M 560,210 Q 615,70 660,210" 
+            fill="none" stroke="#c8892a" stroke-width="2.5" opacity="0.5"/>
+      <path d="M 660,210 Q 700,70 720,185" 
+            fill="none" stroke="#a03020" stroke-width="2" opacity="0.35" stroke-dasharray="6,3"/>
+
+      <!-- Bang event τ+1 -->
+      <circle cx="560" cy="210" r="8" fill="#c8892a" opacity="0.2" filter="url(#bangGlow)"/>
+      <circle cx="560" cy="210" r="5" fill="#c8892a" opacity="0.7" filter="url(#bangGlow)"/>
+
+      <!-- Turnaround τ+1 -->
+      <circle cx="660" cy="70" r="5" fill="#8a7a6a" stroke="#8a7a6a" stroke-width="1.5" opacity="0.5"/>
+
+      <!-- τ+1 label -->
+      <text x="610" y="50" text-anchor="middle" font-family="'Playfair Display', serif"
+            font-size="13" fill="#8a7a6a" font-style="italic" opacity="0.7">τ+1</text>
+
+      <!-- ═══════════════════════════════════════════════════════ -->
+      <!-- ORIENTATION ARROW (what propagates across the wall) -->
+      <path d="M 385,340 Q 440,360 500,340" stroke="#1a1008" stroke-width="1.5" fill="none"
+            marker-end="url(#arrowMuted)" stroke-dasharray="4,3" opacity="0.6"/>
+      <text x="440" y="385" text-anchor="middle" font-family="'Source Serif 4', serif"
+            font-size="11" fill="#8a7a6a" font-style="italic">orientation propagates — not particles</text>
+
+      <!-- CHAIN extends both ways -->
+      <text x="45" y="213" text-anchor="middle" font-family="'Playfair Display', serif"
+            font-size="20" fill="#8a7a6a" opacity="0.5">···</text>
+      <text x="730" y="213" text-anchor="middle" font-family="'Playfair Display', serif"
+            font-size="20" fill="#8a7a6a" opacity="0.5">···</text>
+
+      <!-- τ axis label -->
+      <text x="380" y="415" text-anchor="middle" font-family="'Source Serif 4', serif"
+            font-size="11" fill="#8a7a6a" letter-spacing="2" font-style="italic">cycle index τ ∈ ℤ — no preferred origin</text>
+
+    </svg>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:#c8892a;"></div>
+      Expansion
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background:#a03020; height:2px; background: repeating-linear-gradient(90deg,#a03020 0,#a03020 6px,transparent 6px,transparent 9px);"></div>
+      Contraction
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#c8892a;"></div>
+      Bang (orientation handoff)
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#8a7a6a; border: 2px solid #1a1008; background:#f5f0e8;"></div>
+      Turnaround
+    </div>
+    <div class="legend-item">
+      <div class="legend-swatch" style="background: repeating-linear-gradient(90deg,#c8892a 0,#c8892a 3px,transparent 3px,transparent 6px);"></div>
+      Wall (coupling event)
+    </div>
+  </div>
+
+  <div style="margin-top:32px;" class="caption">
+    <div class="caption-main">
+      "A Big Bang is a <em>handoff</em>, not a beginning."
+    </div>
+    <div class="caption-note">
+      Pendulum Cosmology v4<br>
+      Rux Tux · February 2026
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

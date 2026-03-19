@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pendulum Cosmology — Rux Tux</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #04080f;
+    --surface:   #080e1c;
+    --surface2:  #0d1628;
+    --amber:     #e8a135;
+    --amber-dim: #a06820;
+    --blue:      #4a9eff;
+    --blue-dim:  #2a5a99;
+    --text:      #f0e8d0;
+    --muted:     #7888a0;
+    --rule:      rgba(232,161,53,0.2);
+    --glow:      rgba(232,161,53,0.08);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Crimson Text', Georgia, serif;
+    font-size: 19px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── STAR FIELD ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      radial-gradient(1px 1px at 15% 22%, rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 72% 8%,  rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 40% 55%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 88% 44%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 5%  80%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 60% 90%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1px 1px at 33% 3%,  rgba(255,255,255,0.6) 0%, transparent 100%),
+      radial-gradient(1px 1px at 95% 70%, rgba(255,255,255,0.3) 0%, transparent 100%),
+      radial-gradient(1px 1px at 20% 68%, rgba(255,255,255,0.4) 0%, transparent 100%),
+      radial-gradient(1px 1px at 50% 30%, rgba(255,255,255,0.5) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 78% 62%, rgba(232,161,53,0.5) 0%, transparent 100%),
+      radial-gradient(1.5px 1.5px at 12% 45%, rgba(74,158,255,0.4) 0%, transparent 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 4rem 2rem;
+    overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 1px; height: 80px;
+    background: linear-gradient(to bottom, var(--amber), transparent);
+  }
+
+  .hero-bg-glow {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 60%, rgba(232,161,53,0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 30% at 30% 20%, rgba(74,158,255,0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    color: var(--amber);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 1s ease 0.2s forwards;
+  }
+
+  .hero-title {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(2.8rem, 7vw, 6rem);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: 0.02em;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+    opacity: 0;
+    animation: fadeUp 1s ease 0.4s forwards;
+  }
+
+  .hero-title span {
+    color: var(--amber);
+  }
+
+  .hero-subtitle {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(0.9rem, 2vw, 1.2rem);
+    font-weight: 400;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    margin-bottom: 2.5rem;
+    opacity: 0;
+    animation: fadeUp 1s ease 0.6s forwards;
+  }
+
+  .hero-equation {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(0.75rem, 1.5vw, 0.95rem);
+    color: var(--blue);
+    background: rgba(74,158,255,0.06);
+    border: 1px solid rgba(74,158,255,0.2);
+    border-radius: 4px;
+    padding: 0.8rem 1.5rem;
+    margin-bottom: 1rem;
+    opacity: 0;
+    animation: fadeUp 1s ease 0.8s forwards;
+  }
+
+  .hero-duals {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--muted);
+    opacity: 0;
+    animation: fadeUp 1s ease 1s forwards;
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .hero-duals span { color: var(--amber); }
+
+  .hero-badge {
+    margin-top: 3rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    color: var(--amber-dim);
+    border: 1px solid var(--amber-dim);
+    border-radius: 20px;
+    padding: 0.35rem 1.2rem;
+    opacity: 0;
+    animation: fadeUp 1s ease 1.2s forwards;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 2rem 6rem;
+  }
+
+  /* ── SECTION ── */
+  section {
+    margin-bottom: 6rem;
+  }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    color: var(--amber);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+
+  h2 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1.5rem, 3vw, 2.2rem);
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 1.5rem;
+    letter-spacing: 0.03em;
+  }
+
+  h3 {
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--amber);
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.05em;
+  }
+
+  p {
+    color: #c8d0d8;
+    margin-bottom: 1rem;
+  }
+
+  /* ── ABSTRACT BLOCK ── */
+  .abstract {
+    background: var(--surface);
+    border-left: 3px solid var(--amber);
+    padding: 2rem 2.5rem;
+    margin: 2rem 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .abstract::before {
+    content: '"';
+    position: absolute;
+    top: -0.5rem;
+    left: 1rem;
+    font-family: 'Cinzel', serif;
+    font-size: 6rem;
+    color: var(--glow);
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  /* ── EQUATION BLOCK ── */
+  .eq-block {
+    background: var(--surface2);
+    border: 1px solid rgba(74,158,255,0.25);
+    border-radius: 4px;
+    padding: 1.5rem 2rem;
+    margin: 1.5rem 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    line-height: 1.9;
+    color: #b0d0ff;
+    overflow-x: auto;
+  }
+
+  .eq-label {
+    display: block;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    color: var(--blue-dim);
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .eq-highlight { color: var(--amber); font-weight: 400; }
+
+  /* ── CONCEPT GRID ── */
+  .concept-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+    margin: 2rem 0;
+  }
+
+  .concept-card {
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-top: 2px solid var(--amber-dim);
+    padding: 1.5rem;
+    transition: border-top-color 0.3s, transform 0.3s;
+  }
+
+  .concept-card:hover {
+    border-top-color: var(--amber);
+    transform: translateY(-3px);
+  }
+
+  .concept-card h3 {
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .concept-card p {
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  /* ── TABLE ── */
+  .theorem-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.92rem;
+  }
+
+  .theorem-table th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--amber);
+    border-bottom: 1px solid var(--rule);
+    padding: 0.75rem 1rem;
+    text-align: left;
+  }
+
+  .theorem-table td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: #c8d0d8;
+    vertical-align: top;
+  }
+
+  .theorem-table td:first-child {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--blue);
+    white-space: nowrap;
+  }
+
+  /* ── INFINITE FLIP ── */
+  .flip-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    align-items: center;
+    margin: 2rem 0;
+  }
+
+  .flip-col {
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem;
+  }
+
+  .flip-col.bad { border-top: 2px solid #c0392b; }
+  .flip-col.good { border-top: 2px solid var(--amber); }
+
+  .flip-col h4 {
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+  }
+
+  .flip-col.bad h4 { color: #e74c3c; }
+  .flip-col.good h4 { color: var(--amber); }
+
+  .flip-col ul {
+    list-style: none;
+    font-size: 0.88rem;
+  }
+
+  .flip-col.bad li::before { content: '✗  '; color: #e74c3c; }
+  .flip-col.good li::before { content: '✓  '; color: var(--amber); }
+
+  .flip-col li { margin-bottom: 0.4rem; color: var(--muted); }
+
+  .flip-arrow {
+    font-size: 2rem;
+    color: var(--amber);
+    text-align: center;
+    font-family: 'Cinzel', serif;
+  }
+
+  /* ── DIAGRAMS SECTION ── */
+  .diagram-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .diagram-tab {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.2s;
+  }
+
+  .diagram-tab:hover { color: var(--text); }
+  .diagram-tab.active {
+    color: var(--amber);
+    border-bottom-color: var(--amber);
+  }
+
+  .diagram-frame {
+    display: none;
+    width: 100%;
+    height: 600px;
+    border: 1px solid rgba(255,255,255,0.06);
+    border-top: none;
+    background: var(--surface);
+  }
+
+  .diagram-frame.active { display: block; }
+
+  /* ── VIDEO ── */
+  .video-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 2rem 0;
+  }
+
+  .video-wrap {
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.06);
+    overflow: hidden;
+  }
+
+  .video-wrap video {
+    width: 100%;
+    display: block;
+  }
+
+  .video-wrap .video-label {
+    padding: 0.75rem 1rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    text-transform: uppercase;
+    border-top: 1px solid rgba(255,255,255,0.04);
+  }
+
+  /* ── IMAGES ── */
+  .img-full {
+    width: 100%;
+    border: 1px solid rgba(255,255,255,0.06);
+    display: block;
+    margin: 1.5rem 0;
+  }
+
+  .img-caption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-align: center;
+    margin-top: -0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .img-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  .img-pair figure { margin: 0; }
+  .img-pair figcaption {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-align: center;
+    padding: 0.5rem;
+    border-top: 1px solid rgba(255,255,255,0.04);
+  }
+
+  /* ── QUOTE ── */
+  .pull-quote {
+    border-left: 3px solid var(--amber);
+    padding: 1.5rem 2rem;
+    margin: 2rem 0;
+    background: var(--glow);
+  }
+
+  .pull-quote p {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(1rem, 2vw, 1.3rem);
+    font-style: italic;
+    color: var(--amber);
+    line-height: 1.5;
+    margin: 0 0 0.5rem;
+  }
+
+  .pull-quote cite {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+  }
+
+  /* ── PDF DOWNLOAD ── */
+  .download-block {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 1.5rem 2rem;
+    margin: 3rem 0;
+  }
+
+  .download-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+  }
+
+  .download-info { flex: 1; }
+
+  .download-info h4 {
+    font-family: 'Cinzel', serif;
+    font-size: 1rem;
+    color: var(--text);
+    margin-bottom: 0.25rem;
+  }
+
+  .download-info p {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  .btn-download {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--bg);
+    background: var(--amber);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: background 0.2s, transform 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-download:hover {
+    background: #f0b848;
+    transform: translateY(-1px);
+  }
+
+  /* ── NAV ── */
+  .page-nav {
+    position: fixed;
+    top: 2rem;
+    right: 2rem;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-end;
+  }
+
+  .nav-dot {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    text-decoration: none;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+  }
+
+  .nav-dot:hover { opacity: 1; }
+
+  .nav-dot-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    color: var(--text);
+    text-transform: uppercase;
+    display: none;
+  }
+
+  .nav-dot:hover .nav-dot-label { display: block; }
+
+  .nav-dot-pip {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--muted);
+    transition: background 0.2s, transform 0.2s;
+  }
+
+  .nav-dot:hover .nav-dot-pip {
+    background: var(--amber);
+    transform: scale(1.5);
+  }
+
+  /* ── BACK LINK ── */
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    margin-bottom: 4rem;
+    transition: color 0.2s;
+  }
+
+  .back-link:hover { color: var(--amber); }
+
+  .back-link::before { content: '← '; }
+
+  /* ── DIVIDER ── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 4rem 0;
+  }
+
+  /* ── BALANCE LAWS ── */
+  .laws-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin: 2rem 0;
+  }
+
+  .law-item {
+    background: var(--surface2);
+    border: 1px solid rgba(74,158,255,0.15);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .law-num {
+    font-family: 'Cinzel', serif;
+    font-size: 1.5rem;
+    color: rgba(74,158,255,0.3);
+    line-height: 1;
+    flex-shrink: 0;
+    width: 2rem;
+  }
+
+  .law-text h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    color: var(--blue);
+    margin-bottom: 0.25rem;
+  }
+
+  .law-text p {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 700px) {
+    .video-grid, .img-pair { grid-template-columns: 1fr; }
+    .flip-grid { grid-template-columns: 1fr; }
+    .flip-arrow { display: none; }
+    .laws-grid { grid-template-columns: 1fr; }
+    .page-nav { display: none; }
+    .download-block { flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="page-nav">
+  <a class="nav-dot" href="#overview"><span class="nav-dot-label">Overview</span><span class="nav-dot-pip"></span></a>
+  <a class="nav-dot" href="#framework"><span class="nav-dot-label">Framework</span><span class="nav-dot-pip"></span></a>
+  <a class="nav-dot" href="#diagrams"><span class="nav-dot-label">Diagrams</span><span class="nav-dot-pip"></span></a>
+  <a class="nav-dot" href="#visuals"><span class="nav-dot-label">Visuals</span><span class="nav-dot-pip"></span></a>
+  <a class="nav-dot" href="#lattice"><span class="nav-dot-label">Lattice</span><span class="nav-dot-pip"></span></a>
+  <a class="nav-dot" href="#download"><span class="nav-dot-label">Paper</span><span class="nav-dot-pip"></span></a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg-glow"></div>
+  <div class="hero-eyebrow">What-If Cosmology · February 2026 · v4</div>
+  <h1 class="hero-title">Pendulum<br><span>Cosmology</span></h1>
+  <div class="hero-subtitle">A Cyclic Multiverse with Rules</div>
+  <div class="hero-equation">ȧ² = (8πGK/3) · a⁴/(a⁴+1) + (Λ/3)·a²</div>
+  <div class="hero-duals">
+    <span>ρ(1/a) = ρ(a)</span>
+    <span style="color:var(--muted)">·</span>
+    <span>a_min · a_max = 1</span>
+    <span style="color:var(--muted)">·</span>
+    <span>Λ &lt; 0</span>
+    <span style="color:var(--muted)">·</span>
+    <span>K &gt; 0</span>
+  </div>
+  <div class="hero-badge">⚠ This is a what-if cosmology · No observational claims made</div>
+</section>
+
+<main>
+
+  <a class="back-link" href="../index.html">Back to Portfolio</a>
+
+  <!-- OVERVIEW -->
+  <section id="overview">
+    <div class="section-label">Overview</div>
+    <h2>A Crystal, Not Chaos</h2>
+
+    <div class="abstract">
+      <p>Pendulum Cosmology is a kinematical framework for bounded cyclic evolution in spatially flat FLRW minisuperspace, resting on a self-dual Hamiltonian constraint with Λ&lt;0 that forces a_min·a_max=1 and closed phase-space orbits.</p>
+      <p>The framework began as an attempt to fight uncontrolled infinity — to tame the runaway Kerr tiling, eliminate orphan universes, impose rules on proliferation. By following the math to its conclusion, something unexpected emerged: <em>infinity is not the problem. Uncontrolled infinity is the problem.</em> What was built is infinity with rules — a crystal, not chaos.</p>
+    </div>
+
+    <div class="concept-grid">
+      <div class="concept-card">
+        <h3>Self-Dual Kernel</h3>
+        <p>ρ(1/a) = ρ(a) — the universe's most compressed and most dilute states are geometrically conjugate. a_min·a_max = 1 follows directly.</p>
+      </div>
+      <div class="concept-card">
+        <h3>Cyclic Lattice</h3>
+        <p>τ ∈ ℤ — no preferred origin, no absolute beginning. Every state has a predecessor and a successor connected by the pairing bijection π.</p>
+      </div>
+      <div class="concept-card">
+        <h3>CPT Orientation</h3>
+        <p>R/B labels encode discrete CPT-orientation parity ε ∈ {+1,−1} — not particle content. What propagates across walls is orientation, not baryon number.</p>
+      </div>
+      <div class="concept-card">
+        <h3>Bang Triggers Bang</h3>
+        <p>The only thing that can push back the force of a Big Bang is a Big Bang. Each orientation handoff initiates the next expansion. No first link.</p>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- FRAMEWORK -->
+  <section id="framework">
+    <div class="section-label">Framework</div>
+    <h2>The Kernel & Its Consequences</h2>
+
+    <h3>Part I — Single Pendulum</h3>
+    <div class="eq-block">
+      <span class="eq-label">Hamiltonian Constraint (non-negotiable)</span>
+      ȧ² = F(a)<br>
+      F(a) = <span class="eq-highlight">(8πGK/3) · a⁴/(a⁴+1)</span> + (Λ/3)·a²<br><br>
+      K &gt; 0,  Λ &lt; 0,  a(t) &gt; 0
+    </div>
+
+    <div class="eq-block">
+      <span class="eq-label">Self-Dual Density</span>
+      ρ(a) = K·(a³ + a⁻³)⁻¹ · S(a³ + a⁻³)<br>
+      <span class="eq-highlight">ρ(1/a) = ρ(a)</span>  [self-duality]<br>
+      ⟹  a_min · a_max = 1
+    </div>
+
+    <p><strong>Lemma 1 — Persistence of Turning Points:</strong> Simple zeros of F persist under C¹ perturbations. Cyclic orbits are generic. Eternal expansion requires fine-tuning.</p>
+
+    <hr class="divider">
+
+    <h3>Part II — Multi-Pendulum Ensemble</h3>
+
+    <div class="eq-block">
+      <span class="eq-label">Coupling Kernel (wall-localised)</span>
+      φ(aᵢ, aⱼ) = exp[−(aᵢ−a_max)²/σ²]·exp[−(aⱼ−a_min)²/σ²] + (i↔j)<br><br>
+      Pairing constraint: <span class="eq-highlight">|U(t)| = |L(t)|</span>  at all turnaround instants
+    </div>
+
+    <p>Meeting events happen only at walls — the coupling is non-negligible only when one cycle is near its maximum and another near its minimum. The multiverse is a crystal.</p>
+
+    <hr class="divider">
+
+    <h3>Part IV — CPT-Orientation Parity</h3>
+
+    <table class="theorem-table">
+      <thead>
+        <tr><th>Label</th><th>What it IS</th><th>What it is NOT</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>R / ε=+1</td><td>Direct CPT orientation; assigned by π at turnaround wall</td><td>A cycle containing matter</td></tr>
+        <tr><td>B / ε=−1</td><td>Conjugate CPT orientation; ε(j)=−ε(i) required by π</td><td>A cycle containing antimatter</td></tr>
+        <tr><td>π(i)=j</td><td>Pairing bijection; the structural trigger for orientation handoff</td><td>A force or dynamical field</td></tr>
+        <tr><td>Σε(i)=0</td><td>Global CPT conservation across full lattice at all times</td><td>Local CPT symmetry of each cycle</td></tr>
+      </tbody>
+    </table>
+
+    <div class="pull-quote">
+      <p>"The only thing that can push back the force of a Big Bang is a Big Bang."</p>
+      <cite>— Rux Tux, 2026</cite>
+    </div>
+
+    <hr class="divider">
+
+    <h3>Four Global Balance Laws</h3>
+    <div class="laws-grid">
+      <div class="law-item">
+        <span class="law-num">1</span>
+        <div class="law-text">
+          <h4>Orientation Balance</h4>
+          <p>N(+1) = N(−1) — global CPT conservation across all cycles</p>
+        </div>
+      </div>
+      <div class="law-item">
+        <span class="law-num">2</span>
+        <div class="law-text">
+          <h4>Phase Balance</h4>
+          <p>#{expanding} = #{contracting} at all times globally</p>
+        </div>
+      </div>
+      <div class="law-item">
+        <span class="law-num">3</span>
+        <div class="law-text">
+          <h4>Zero Energy</h4>
+          <p>E_total = 0 — the universe is a zero-energy system</p>
+        </div>
+      </div>
+      <div class="law-item">
+        <span class="law-num">4</span>
+        <div class="law-text">
+          <h4>Wall Balance</h4>
+          <p>|U(t)| = |L(t)| — every maximum is paired with a minimum</p>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <h3>The Infinity Flip</h3>
+    <div class="flip-grid">
+      <div class="flip-col bad">
+        <h4>Bad Infinity (what we started fighting)</h4>
+        <ul>
+          <li>Uncontrolled branching</li>
+          <li>No rules or constraints</li>
+          <li>Orphan universes</li>
+          <li>Random beginnings</li>
+          <li>Proliferation without limit</li>
+        </ul>
+      </div>
+      <div class="flip-arrow">→</div>
+      <div class="flip-col good">
+        <h4>Good Infinity (what we built)</h4>
+        <ul>
+          <li>Periodic crystal lattice</li>
+          <li>Four conservation laws</li>
+          <li>Every state has a parent</li>
+          <li>No beginning — τ ∈ ℤ</li>
+          <li>Bang triggers bang</li>
+        </ul>
+      </div>
+    </div>
+    <p style="text-align:center; font-family:'JetBrains Mono',monospace; font-size:0.8rem; color:var(--amber); margin-top:1rem;">We did not prove infinity is false. We proved <em>uncontrolled</em> infinity is false.</p>
+  </section>
+
+  <hr class="divider">
+
+  <!-- INTERACTIVE DIAGRAMS -->
+  <section id="diagrams">
+    <div class="section-label">Interactive Diagrams</div>
+    <h2>Three Windows Into the Framework</h2>
+    <p>Each diagram was built to make an abstract structural concept visible. Click through all three.</p>
+
+    <div class="diagram-tabs">
+      <button class="diagram-tab active" onclick="switchDiagram('A', this)">A — Intuition</button>
+      <button class="diagram-tab" onclick="switchDiagram('B', this)">B — Lattice</button>
+      <button class="diagram-tab" onclick="switchDiagram('C', this)">C — Kernel</button>
+    </div>
+    <iframe id="diag-A" class="diagram-frame active" src="diagram_A_intuition.html"></iframe>
+    <iframe id="diag-B" class="diagram-frame" src="diagram_B_lattice.html"></iframe>
+    <iframe id="diag-C" class="diagram-frame" src="diagram_C_kernel.html"></iframe>
+  </section>
+
+  <hr class="divider">
+
+  <!-- VISUALS -->
+  <section id="visuals">
+    <div class="section-label">Framework Visuals</div>
+    <h2>Diagrams from the Paper</h2>
+
+    <div class="img-pair">
+      <figure>
+        <img src="Kernal_Handoff.png" alt="Kernel Handoff Diagram" style="width:100%; border:1px solid rgba(255,255,255,0.06);">
+        <figcaption>Kernel Handoff — orientation propagation via pairing map π</figcaption>
+      </figure>
+      <figure>
+        <img src="bendulum_Framework.png" alt="Pendulum Framework Overview" style="width:100%; border:1px solid rgba(255,255,255,0.06);">
+        <figcaption>Pendulum Framework — full structural overview</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- LATTICE ANIMATIONS -->
+  <section id="lattice">
+    <div class="section-label">Lattice Animations</div>
+    <h2>The Handoff in Motion</h2>
+    <p>Two animated renders of the cyclic lattice handoff — τ-indexed cycles, wall events, orientation propagation.</p>
+
+    <div class="video-grid">
+      <div class="video-wrap">
+        <video controls loop muted playsinline>
+          <source src="Lattice_Handoff.mp4" type="video/mp4">
+        </video>
+        <div class="video-label">Lattice Handoff — v1</div>
+      </div>
+      <div class="video-wrap">
+        <video controls loop muted playsinline>
+          <source src="Lattice_Handoff_v2.mp4" type="video/mp4">
+        </video>
+        <div class="video-label">Lattice Handoff — v2</div>
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- DOWNLOAD -->
+  <section id="download">
+    <div class="section-label">Full Paper</div>
+    <h2>Read the Complete Framework</h2>
+    <p>34 pages. Five parts plus three addenda covering coupling kernel justification, effective late-time acceleration with Λ&lt;0, and a quantum bridge via the Wheeler-DeWitt minisuperspace. Purely classical and kinematical — no observational claims made.</p>
+
+    <div class="download-block">
+      <div class="download-icon">📄</div>
+      <div class="download-info">
+        <h4>Pendulum Cosmology v4 — Full Paper</h4>
+        <p>Rux Tux · February 2026 · 34 pages · PDF</p>
+      </div>
+      <a class="btn-download" href="PENDULUM_COSMOLOGY_GRAND.pdf" download>Download PDF</a>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  function switchDiagram(id, btn) {
+    document.querySelectorAll('.diagram-frame').forEach(f => f.classList.remove('active'));
+    document.querySelectorAll('.diagram-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('diag-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+</script>
+
+</body>
+</html>
