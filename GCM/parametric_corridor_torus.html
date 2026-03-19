@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GCM · Parametric Corridor → Torus</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap');
+
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:#000;
+  color:#bbb;
+  font-family:'Space Mono', monospace;
+}
+canvas {
+  position:fixed;
+  inset:0;
+  display:block;
+}
+
+#top {
+  position:fixed;
+  top:18px;
+  left:50%;
+  transform:translateX(-50%);
+  z-index:20;
+  text-align:center;
+  width:min(94vw, 820px);
+  pointer-events:none;
+}
+#title {
+  font-family:'Crimson Pro', serif;
+  font-size:32px;
+  font-weight:300;
+  color:#fff;
+  letter-spacing:0.04em;
+}
+#subtitle {
+  margin-top:6px;
+  font-size:10px;
+  letter-spacing:0.22em;
+  text-transform:uppercase;
+  color:#555;
+}
+#desc {
+  margin-top:10px;
+  font-family:'Crimson Pro', serif;
+  font-style:italic;
+  font-size:15px;
+  line-height:1.55;
+  color:#7b7b7b;
+}
+
+#mathbox {
+  position:fixed;
+  top:22px;
+  right:24px;
+  z-index:20;
+  width:min(370px, 40vw);
+  padding:12px 14px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(0,0,0,0.58);
+  backdrop-filter: blur(6px);
+}
+#mathbox .k {
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:0.18em;
+  color:#4c4c4c;
+}
+#mathbox .eq {
+  margin-top:8px;
+  font-family:'Crimson Pro', serif;
+  font-size:16px;
+  color:#d7d7d7;
+  line-height:1.45;
+}
+#mathbox .small {
+  margin-top:8px;
+  font-size:10px;
+  color:#6b6b6b;
+  line-height:1.5;
+}
+#mathbox .accentA { color:#4fc3f7; }
+#mathbox .accentB { color:#ff7043; }
+#mathbox .accentP { color:#81c784; }
+#mathbox .accentT { color:#ce93d8; }
+
+.flabel {
+  position:fixed;
+  z-index:12;
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+  text-align:center;
+}
+.fk {
+  font-size:16px;
+  font-weight:700;
+}
+.fn {
+  font-size:8px;
+  text-transform:uppercase;
+  letter-spacing:0.15em;
+  opacity:0.7;
+  margin-top:2px;
+}
+
+#ui {
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  z-index:20;
+  padding:14px 18px 20px;
+  background:linear-gradient(transparent, rgba(0,0,0,0.95) 34%);
+}
+
+#presetRow {
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  justify-content:center;
+}
+.pbtn {
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.1);
+  color:#777;
+  padding:9px 14px;
+  border-radius:3px;
+  cursor:pointer;
+  font-size:10px;
+  letter-spacing:0.14em;
+  text-transform:uppercase;
+  font-family:'Space Mono', monospace;
+  transition:all 0.18s ease;
+}
+.pbtn:hover {
+  color:#b9b9b9;
+  background:rgba(255,255,255,0.08);
+}
+.pbtn.active {
+  border-color:var(--c);
+  color:var(--c);
+  background:rgba(255,255,255,0.07);
+}
+
+#advToggle {
+  margin-top:10px;
+  text-align:center;
+  cursor:pointer;
+  user-select:none;
+  font-size:9px;
+  color:#444;
+  letter-spacing:0.17em;
+  text-transform:uppercase;
+}
+#advToggle:hover { color:#777; }
+
+#panel {
+  max-width:940px;
+  margin:12px auto 0;
+  display:none;
+  grid-template-columns:repeat(6, minmax(0,1fr));
+  gap:14px;
+  padding:14px;
+  border:1px solid rgba(255,255,255,0.08);
+  background:rgba(255,255,255,0.03);
+}
+#panel.open { display:grid; }
+
+.sg { display:flex; flex-direction:column; gap:6px; }
+.row { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.sk { font-size:12px; font-weight:700; }
+.sd {
+  flex:1;
+  text-align:center;
+  font-size:8px;
+  color:#444;
+  letter-spacing:0.12em;
+  text-transform:uppercase;
+}
+.sv { font-size:10px; font-weight:700; min-width:42px; text-align:right; }
+
+.a .sk, .a .sv { color:#4fc3f7; }
+.b .sk, .b .sv { color:#ff7043; }
+.t .sk, .t .sv { color:#ce93d8; }
+.p .sk, .p .sv { color:#81c784; }
+.g .sk, .g .sv { color:#ffd54f; }
+.m .sk, .m .sv { color:#ffcc80; }
+
+input[type=range] {
+  -webkit-appearance:none;
+  appearance:none;
+  width:100%;
+  height:2px;
+  background:#1e1e1e;
+  outline:none;
+  cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance:none;
+  appearance:none;
+  width:12px;
+  height:12px;
+  border-radius:50%;
+  border:2px solid #000;
+  cursor:pointer;
+}
+.a input::-webkit-slider-thumb { background:#4fc3f7; }
+.b input::-webkit-slider-thumb { background:#ff7043; }
+.t input::-webkit-slider-thumb { background:#ce93d8; }
+.p input::-webkit-slider-thumb { background:#81c784; }
+.g input::-webkit-slider-thumb { background:#ffd54f; }
+.m input::-webkit-slider-thumb { background:#ffcc80; }
+
+#bottomHint {
+  margin-top:9px;
+  text-align:center;
+  font-size:8px;
+  color:#2f2f2f;
+  letter-spacing:0.18em;
+  text-transform:uppercase;
+}
+
+#meters {
+  position:fixed;
+  left:24px;
+  top:24px;
+  z-index:20;
+  width:180px;
+  pointer-events:none;
+}
+.meter {
+  margin-bottom:14px;
+}
+.mlab {
+  font-size:8px;
+  color:#444;
+  text-transform:uppercase;
+  letter-spacing:0.15em;
+}
+.track {
+  margin-top:6px;
+  width:100%;
+  height:2px;
+  background:#171717;
+  position:relative;
+}
+.fill {
+  position:absolute;
+  inset:0 auto 0 0;
+  width:0%;
+  background:#ce93d8;
+}
+.mval {
+  margin-top:5px;
+  font-size:11px;
+  color:#aaa;
+}
+.msub {
+  margin-top:2px;
+  font-size:10px;
+  color:#5a5a5a;
+  font-family:'Crimson Pro', serif;
+  font-style:italic;
+}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="top">
+  <div id="title">Parametric Corridor → Torus</div>
+  <div id="subtitle">one master map · boundary-defined interior · exact torus collapse</div>
+  <div id="desc">
+    The surface is generated by one equation: a corridor map C(θ,t), a torus map T(θ,t),
+    and a smooth blend b(V). At low twist, P lives between A and B. At high twist, the
+    same surface closes into a true torus.
+  </div>
+</div>
+
+<div id="meters">
+  <div class="meter">
+    <div class="mlab">torus blend</div>
+    <div class="track"><div class="fill" id="blendFill"></div></div>
+    <div class="mval" id="blendVal">0%</div>
+    <div class="msub" id="blendMode">straight corridor</div>
+  </div>
+  <div class="meter">
+    <div class="mlab">interior scale rₚ = √(rₐrᵦ)</div>
+    <div class="track"><div class="fill" id="pFill" style="background:#81c784;"></div></div>
+    <div class="mval" id="pVal">0.00</div>
+    <div class="msub" id="pMode">boundary-derived interior</div>
+  </div>
+</div>
+
+<div id="mathbox">
+  <div class="k">master mapping</div>
+  <div class="eq" id="eqText">
+    S(θ,t) = (1-b) C(θ,t) + b T(θ,t)
+  </div>
+  <div class="small" id="eqSmall">
+    C = corridor map between <span class="accentA">A</span> and <span class="accentB">B</span><br>
+    T = exact <span class="accentT">torus</span> map<br>
+    b(V) = smooth transition controlled by twist V<br>
+    r<sub>P</sub> = √(r<sub>A</sub>r<sub>B</sub>) sets the interior scale <span class="accentP">P</span>
+  </div>
+</div>
+
+<div class="flabel" id="lblA">
+  <div class="fk" style="color:#4fc3f7;">A</div>
+  <div class="fn" style="color:#4fc3f7;">Upper Boundary</div>
+</div>
+<div class="flabel" id="lblB">
+  <div class="fk" style="color:#ff7043;">B</div>
+  <div class="fn" style="color:#ff7043;">Lower Boundary</div>
+</div>
+<div class="flabel" id="lblP">
+  <div class="fk" style="color:#81c784;">P</div>
+  <div class="fn" style="color:#81c784;">Emergent Interior</div>
+</div>
+
+<div id="ui">
+  <div id="presetRow"></div>
+
+  <div id="advToggle">⊕ advanced controls</div>
+
+  <div id="panel">
+    <div class="sg t">
+      <div class="row"><span class="sk">V</span><span class="sd">twist</span><span class="sv" id="svTwist">0°</span></div>
+      <input type="range" id="rngTwist" min="0" max="360" step="1" value="0">
+    </div>
+
+    <div class="sg a">
+      <div class="row"><span class="sk">A</span><span class="sd">radius A</span><span class="sv" id="svRA">1.00</span></div>
+      <input type="range" id="rngRA" min="30" max="200" step="1" value="100">
+    </div>
+
+    <div class="sg b">
+      <div class="row"><span class="sk">B</span><span class="sd">radius B</span><span class="sv" id="svRB">0.62</span></div>
+      <input type="range" id="rngRB" min="15" max="180" step="1" value="62">
+    </div>
+
+    <div class="sg g">
+      <div class="row"><span class="sk">H</span><span class="sd">height</span><span class="sv" id="svH">2.50</span></div>
+      <input type="range" id="rngH" min="60" max="320" step="1" value="100">
+    </div>
+
+    <div class="sg p">
+      <div class="row"><span class="sk">K</span><span class="sd">bulge</span><span class="sv" id="svK">0.70</span></div>
+      <input type="range" id="rngK" min="0" max="150" step="1" value="70">
+    </div>
+
+    <div class="sg m">
+      <div class="row"><span class="sk">R</span><span class="sd">torus major</span><span class="sv" id="svRMajor">1.70</span></div>
+      <input type="range" id="rngRMajor" min="40" max="300" step="1" value="170">
+    </div>
+  </div>
+
+  <div id="bottomHint">drag to rotate · scroll to zoom · exact torus at high twist · same surface, different regime</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.08;
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x000000, 0.05);
+
+const camera = new THREE.PerspectiveCamera(48, innerWidth/innerHeight, 0.01, 100);
+
+scene.add(new THREE.AmbientLight(0x090912, 2.8));
+const lightA = new THREE.PointLight(0x4fc3f7, 4.2, 15);
+const lightB = new THREE.PointLight(0xff7043, 4.2, 15);
+const lightP = new THREE.PointLight(0x81c784, 2.0, 10);
+const lightT = new THREE.PointLight(0xce93d8, 2.2, 11);
+scene.add(lightA, lightB, lightP, lightT);
+
+const world = new THREE.Group();
+scene.add(world);
+
+let drag = false;
+let pm = {x:0, y:0};
+const sph = { theta:0.35, phi:1.14, r:6.6 };
+
+canvas.addEventListener('mousedown', e => {
+  drag = true;
+  pm = { x:e.clientX, y:e.clientY };
+});
+window.addEventListener('mouseup', () => drag = false);
+window.addEventListener('mousemove', e => {
+  if (!drag) return;
+  sph.theta -= (e.clientX - pm.x) * 0.009;
+  sph.phi = Math.max(0.08, Math.min(Math.PI - 0.08, sph.phi + (e.clientY - pm.y) * 0.009));
+  pm = { x:e.clientX, y:e.clientY };
+});
+window.addEventListener('wheel', e => {
+  sph.r = Math.max(2.5, Math.min(18, sph.r + e.deltaY * 0.008));
+}, { passive:true });
+
+const state = {
+  twist: 0,
+  rA: 1.00,
+  rB: 0.62,
+  h: 2.50,
+  bulge: 0.70,
+  Rmajor: 1.70
+};
+const target = { ...state };
+
+const PRESETS = [
+  {
+    label:'① Still',
+    color:'#81c784',
+    title:'The Still Corridor',
+    sub:'V = 0° · aligned boundaries',
+    desc:'A and B align. P exists only because both boundaries exist. No recirculation yet.',
+    twist:0, rA:1.00, rB:0.62, h:2.50, bulge:0.70, Rmajor:1.70
+  },
+  {
+    label:'② Twist',
+    color:'#4fc3f7',
+    title:'Twist Begins',
+    sub:'V = 70° · torsion appears',
+    desc:'The boundary relationship is changing. The interior is still corridor-dominated, but torsion is now visible.',
+    twist:70, rA:1.00, rB:0.62, h:2.50, bulge:0.72, Rmajor:1.70
+  },
+  {
+    label:'③ Stress',
+    color:'#ffcc80',
+    title:'Torsion Build',
+    sub:'V = 145° · stressed corridor',
+    desc:'The surface is under strong torsion. A scientist can now read this as a parameterized deformation, not just graphics.',
+    twist:145, rA:1.02, rB:0.62, h:2.40, bulge:0.78, Rmajor:1.72
+  },
+  {
+    label:'④ Threshold',
+    color:'#ce93d8',
+    title:'Topological Threshold',
+    sub:'V = 190° · corridor-to-loop transition',
+    desc:'This is the turning point. The blend starts to transfer the geometry from a boundary corridor into a closed torus map.',
+    twist:190, rA:1.00, rB:0.62, h:2.20, bulge:0.82, Rmajor:1.72
+  },
+  {
+    label:'⑤ Recirculate',
+    color:'#ff8a65',
+    title:'Recirculating Surface',
+    sub:'V = 255° · torus-dominant regime',
+    desc:'The exact torus map now dominates. The corridor has not merely bulged — it has entered a genuine closed-loop parameterization.',
+    twist:255, rA:1.00, rB:0.64, h:2.00, bulge:0.86, Rmajor:1.78
+  },
+  {
+    label:'⑥ Closed',
+    color:'#ef5350',
+    title:'Exact Torus Closure',
+    sub:'V = 340° · near full torus',
+    desc:'This is no longer pretending. The map is almost entirely toroidal. Same system, different parameter regime.',
+    twist:340, rA:1.00, rB:0.64, h:1.90, bulge:0.88, Rmajor:1.82
+  }
+];
+
+function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function smoothstep(x) {
+  const t = clamp(x, 0, 1);
+  return t * t * (3 - 2 * t);
+}
+function torusBlendDeg(deg) {
+  const THRESH = 165;
+  const RANGE  = 165;
+  return smoothstep((deg - THRESH) / RANGE);
+}
+function pRadius(rA, rB) {
+  return Math.sqrt(Math.max(0.0001, rA * rB));
+}
+
+function corridorMap(theta, t, p) {
+  const twistRad = p.twist * Math.PI / 180;
+  const rp = pRadius(p.rA, p.rB);
+  const rLinear = lerp(p.rA, p.rB, t);
+  const rBulge = p.bulge * rp * Math.sin(Math.PI * t);
+  const ang = theta + twistRad * t;
+  const y = p.h * (0.5 - t);
+  const r = Math.max(0.01, rLinear + rBulge);
+  return new THREE.Vector3(
+    Math.cos(ang) * r,
+    y,
+    Math.sin(ang) * r
+  );
+}
+
+function torusMap(theta, t, p) {
+  const twistRad = p.twist * Math.PI / 180;
+  const phi = 2 * Math.PI * (t - 0.5);
+  const rp = pRadius(p.rA, p.rB);
+  const rMinor = Math.max(0.16, rp * 0.62);
+  const R = Math.max(rMinor + 0.18, p.Rmajor);
+  const ang = theta + 0.18 * twistRad;
+  return new THREE.Vector3(
+    (R + rMinor * Math.cos(phi)) * Math.cos(ang),
+    rMinor * Math.sin(phi),
+    (R + rMinor * Math.cos(phi)) * Math.sin(ang)
+  );
+}
+
+function masterSurface(theta, t, p) {
+  const b = torusBlendDeg(p.twist);
+  const C = corridorMap(theta, t, p);
+  const T = torusMap(theta, t, p);
+  return C.multiplyScalar(1 - b).add(T.multiplyScalar(b));
+}
+
+const groups = {
+  surfaceLines: [],
+  particles: null,
+  pSphere: null,
+  torusGhost: null
+};
+
+function clearWorld() {
+  while (world.children.length) {
+    const obj = world.children.pop();
+    if (obj.geometry) obj.geometry.dispose?.();
+    if (obj.material) {
+      if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose?.());
+      else obj.material.dispose?.();
+    }
+  }
+  groups.surfaceLines = [];
+  groups.particles = null;
+  groups.pSphere = null;
+  groups.torusGhost = null;
+}
+
+function addLine(points, color, opacity) {
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const mat = new THREE.LineBasicMaterial({
+    color,
+    transparent:true,
+    opacity
+  });
+  const line = new THREE.Line(geo, mat);
+  world.add(line);
+  groups.surfaceLines.push(line);
+  return line;
+}
+
+function addMesh(mesh) {
+  world.add(mesh);
+  return mesh;
+}
+
+function buildSceneGeometry(p) {
+  clearWorld();
+
+  const b = torusBlendDeg(p.twist);
+  const rp = pRadius(p.rA, p.rB);
+  const guideFade = 1 - b * 0.88;
+
+  const A = new THREE.Mesh(
+    new THREE.TorusGeometry(p.rA, 0.022, 18, 96),
+    new THREE.MeshStandardMaterial({
+      color:0x4fc3f7,
+      emissive:0x4fc3f7,
+      emissiveIntensity:3.3,
+      transparent:true,
+      opacity:Math.max(0.04, guideFade),
+      roughness:0.12
+    })
+  );
+  A.position.y = p.h * 0.5;
+  addMesh(A);
+
+  const AFill = new THREE.Mesh(
+    new THREE.CircleGeometry(p.rA, 72),
+    new THREE.MeshStandardMaterial({
+      color:0x4fc3f7,
+      transparent:true,
+      opacity:0.06 * guideFade,
+      side:THREE.DoubleSide
+    })
+  );
+  AFill.position.y = p.h * 0.5;
+  AFill.rotation.x = Math.PI / 2;
+  addMesh(AFill);
+
+  const B = new THREE.Mesh(
+    new THREE.TorusGeometry(p.rB, 0.022, 18, 96),
+    new THREE.MeshStandardMaterial({
+      color:0xff7043,
+      emissive:0xff7043,
+      emissiveIntensity:3.3,
+      transparent:true,
+      opacity:Math.max(0.04, guideFade),
+      roughness:0.12
+    })
+  );
+  B.position.y = -p.h * 0.5;
+  B.rotation.y = p.twist * Math.PI / 180;
+  addMesh(B);
+
+  const BFill = new THREE.Mesh(
+    new THREE.CircleGeometry(p.rB, 72),
+    new THREE.MeshStandardMaterial({
+      color:0xff7043,
+      transparent:true,
+      opacity:0.07 * guideFade,
+      side:THREE.DoubleSide
+    })
+  );
+  BFill.position.y = -p.h * 0.5;
+  BFill.rotation.x = Math.PI / 2;
+  addMesh(BFill);
+
+  const MERIDIANS = 28;
+  const TSTEPS = 120;
+  for (let i = 0; i < MERIDIANS; i++) {
+    const theta = (i / MERIDIANS) * Math.PI * 2;
+    const pts = [];
+    for (let s = 0; s <= TSTEPS; s++) {
+      const t = s / TSTEPS;
+      pts.push(masterSurface(theta, t, p));
+    }
+    const c = new THREE.Color(0x4fc3f7).lerp(new THREE.Color(0xff7043), i / MERIDIANS);
+    addLine(pts, c, 0.54);
+  }
+
+  const LATS = 22;
+  const THSTEPS = 160;
+  for (let j = 0; j <= LATS; j++) {
+    const t = j / LATS;
+    const pts = [];
+    for (let s = 0; s <= THSTEPS; s++) {
+      const theta = (s / THSTEPS) * Math.PI * 2;
+      pts.push(masterSurface(theta, t, p));
+    }
+
+    const c = new THREE.Color(0x4fc3f7).lerp(new THREE.Color(0xff7043), t);
+    const op = (j === 0 || j === LATS) ? 0.68 : (t > 0.38 && t < 0.62 ? 0.34 : 0.18 + 0.18 * b);
+    addLine(pts, c, op);
+  }
+
+  const pR = rp * (0.55 - 0.16 * b);
+  const pSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(Math.max(0.12, pR), 34, 34),
+    new THREE.MeshStandardMaterial({
+      color:0x0d3016,
+      emissive:0x125f22,
+      emissiveIntensity:1.1 + 0.8 * b,
+      transparent:true,
+      opacity:0.22
+    })
+  );
+  addMesh(pSphere);
+
+  const pWire = new THREE.Mesh(
+    new THREE.SphereGeometry(Math.max(0.12, pR), 16, 16),
+    new THREE.MeshBasicMaterial({
+      color:0x81c784,
+      wireframe:true,
+      transparent:true,
+      opacity:0.11
+    })
+  );
+  addMesh(pWire);
+  groups.pSphere = pSphere;
+
+  const ghostMinor = Math.max(0.16, rp * 0.62);
+  const ghostMajor = Math.max(ghostMinor + 0.18, p.Rmajor);
+  const ghost = new THREE.Mesh(
+    new THREE.TorusGeometry(ghostMajor, ghostMinor, 22, 110),
+    new THREE.MeshBasicMaterial({
+      color:0xce93d8,
+      wireframe:true,
+      transparent:true,
+      opacity:0.08 + 0.30 * b
+    })
+  );
+  ghost.rotation.x = Math.PI / 2;
+  addMesh(ghost);
+  groups.torusGhost = ghost;
+
+  const COUNT = 700;
+  const pos = new Float32Array(COUNT * 3);
+  const col = new Float32Array(COUNT * 3);
+  const cA = new THREE.Color(0x4fc3f7);
+  const cP = new THREE.Color(0x81c784);
+  const cB = new THREE.Color(0xff7043);
+
+  for (let i = 0; i < COUNT; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const t = Math.random();
+    const surf = masterSurface(theta, t, p);
+    const inward = 0.75 + Math.random() * 0.25;
+    surf.multiplyScalar(inward);
+
+    pos[i*3] = surf.x;
+    pos[i*3 + 1] = surf.y;
+    pos[i*3 + 2] = surf.z;
+
+    let c;
+    if (t < 0.28) c = cA.clone().lerp(cP, t / 0.28);
+    else if (t > 0.72) c = cP.clone().lerp(cB, (t - 0.72) / 0.28);
+    else c = cP.clone();
+
+    if (b > 0.55) c.lerp(new THREE.Color(0xce93d8), (b - 0.55) / 0.45 * 0.34);
+
+    col[i*3] = c.r;
+    col[i*3 + 1] = c.g;
+    col[i*3 + 2] = c.b;
+  }
+
+  const pg = new THREE.BufferGeometry();
+  pg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  pg.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  const pm = new THREE.PointsMaterial({
+    size:0.024,
+    vertexColors:true,
+    transparent:true,
+    opacity:0.78
+  });
+  const pts = new THREE.Points(pg, pm);
+  addMesh(pts);
+  groups.particles = pts;
+
+  updateMeters();
+}
+
+function setLabel(id, vec3) {
+  const v = vec3.clone().project(camera);
+  const el = document.getElementById(id);
+  el.style.left = ((v.x * 0.5 + 0.5) * innerWidth) + 'px';
+  el.style.top  = ((-v.y * 0.5 + 0.5) * innerHeight) + 'px';
+}
+
+const presetRow = document.getElementById('presetRow');
+function setTopText(title, sub, desc, color) {
+  document.getElementById('title').textContent = title;
+  document.getElementById('title').style.color = color;
+  document.getElementById('subtitle').textContent = sub;
+  document.getElementById('desc').textContent = desc;
+}
+function deactivateButtons() {
+  [...document.querySelectorAll('.pbtn')].forEach(b => b.classList.remove('active'));
+}
+PRESETS.forEach((p, idx) => {
+  const btn = document.createElement('button');
+  btn.className = 'pbtn';
+  btn.textContent = p.label;
+  btn.style.setProperty('--c', p.color);
+  btn.addEventListener('click', () => {
+    deactivateButtons();
+    btn.classList.add('active');
+    Object.assign(target, {
+      twist:p.twist,
+      rA:p.rA,
+      rB:p.rB,
+      h:p.h,
+      bulge:p.bulge,
+      Rmajor:p.Rmajor
+    });
+    setTopText(p.title, p.sub, p.desc, p.color);
+    syncInputs();
+  });
+  presetRow.appendChild(btn);
+  if (idx === 0) btn.classList.add('active');
+});
+
+const panel = document.getElementById('panel');
+let advOpen = false;
+document.getElementById('advToggle').addEventListener('click', () => {
+  advOpen = !advOpen;
+  panel.classList.toggle('open', advOpen);
+  document.getElementById('advToggle').textContent = advOpen ? '⊖ advanced controls' : '⊕ advanced controls';
+});
+
+function bindRange(id, key, format, mapIn = v => v) {
+  const el = document.getElementById(id);
+  const sv = document.getElementById('sv' + id.replace('rng',''));
+  el.addEventListener('input', () => {
+    target[key] = mapIn(parseFloat(el.value));
+    sv.textContent = format(target[key]);
+    deactivateButtons();
+    setTopText(
+      'Custom Parametric Surface',
+      'manual control · one master map',
+      'You are now directly controlling the surface parameters. Low twist preserves corridor logic. High twist drives an exact torus closure.',
+      '#ddd'
+    );
+  });
+  sv.textContent = format(target[key]);
+}
+bindRange('rngTwist', 'twist', v => Math.round(v) + '°');
+bindRange('rngRA', 'rA', v => v.toFixed(2), v => v / 100);
+bindRange('rngRB', 'rB', v => v.toFixed(2), v => v / 100);
+bindRange('rngH', 'h', v => v.toFixed(2), v => v / 40);
+bindRange('rngK', 'bulge', v => v.toFixed(2), v => v / 100);
+bindRange('rngRMajor', 'Rmajor', v => v.toFixed(2), v => v / 100);
+
+function syncInputs() {
+  document.getElementById('rngTwist').value = Math.round(target.twist);
+  document.getElementById('svTwist').textContent = Math.round(target.twist) + '°';
+  document.getElementById('rngRA').value = Math.round(target.rA * 100);
+  document.getElementById('svRA').textContent = target.rA.toFixed(2);
+  document.getElementById('rngRB').value = Math.round(target.rB * 100);
+  document.getElementById('svRB').textContent = target.rB.toFixed(2);
+  document.getElementById('rngH').value = Math.round(target.h * 40);
+  document.getElementById('svH').textContent = target.h.toFixed(2);
+  document.getElementById('rngK').value = Math.round(target.bulge * 100);
+  document.getElementById('svK').textContent = target.bulge.toFixed(2);
+  document.getElementById('rngRMajor').value = Math.round(target.Rmajor * 100);
+  document.getElementById('svRMajor').textContent = target.Rmajor.toFixed(2);
+}
+syncInputs();
+
+function updateMeters() {
+  const b = torusBlendDeg(state.twist);
+  const rp = pRadius(state.rA, state.rB);
+
+  document.getElementById('blendFill').style.width = Math.round(b * 100) + '%';
+  document.getElementById('blendVal').textContent = Math.round(b * 100) + '%';
+
+  let mode = 'straight corridor';
+  if (b > 0.92) mode = 'exact torus regime';
+  else if (b > 0.72) mode = 'torus-dominant';
+  else if (b > 0.45) mode = 'recirculating surface';
+  else if (b > 0.18) mode = 'threshold region';
+  document.getElementById('blendMode').textContent = mode;
+
+  const pPct = clamp((rp - 0.2) / 1.2, 0, 1);
+  document.getElementById('pFill').style.width = Math.round(pPct * 100) + '%';
+  document.getElementById('pVal').textContent = rp.toFixed(2);
+  document.getElementById('pMode').textContent = 'P from A and B together';
+
+  document.getElementById('eqText').innerHTML =
+    'S(θ,t) = (1-b) C(θ,t) + b T(θ,t)';
+
+  document.getElementById('eqSmall').innerHTML =
+    'b(V) = smoothstep((V - V<sub>c</sub>)/ΔV)<br>' +
+    'r<sub>P</sub> = √(r<sub>A</sub>r<sub>B</sub>)<br>' +
+    'C = corridor map between <span class="accentA">A</span> and <span class="accentB">B</span><br>' +
+    'T = exact <span class="accentT">torus</span> map with the same surface variables';
+}
+
+let needsBuild = true;
+function updateState() {
+  let changed = false;
+  for (const k of Object.keys(state)) {
+    const d = target[k] - state[k];
+    if (Math.abs(d) > 0.0005) {
+      state[k] += d * 0.06;
+      changed = true;
+    } else {
+      state[k] = target[k];
+    }
+  }
+  if (changed) needsBuild = true;
+}
+
+const clock = new THREE.Clock();
+
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  if (!drag) sph.theta += 0.0026;
+
+  camera.position.set(
+    sph.r * Math.sin(sph.phi) * Math.sin(sph.theta),
+    sph.r * Math.cos(sph.phi),
+    sph.r * Math.sin(sph.phi) * Math.cos(sph.theta)
+  );
+  camera.lookAt(0,0,0);
+
+  updateState();
+  if (needsBuild) {
+    buildSceneGeometry(state);
+    needsBuild = false;
+  }
+
+  const b = torusBlendDeg(state.twist);
+  const rp = pRadius(state.rA, state.rB);
+  const torusMinor = Math.max(0.16, rp * 0.62);
+  const torusMajor = Math.max(torusMinor + 0.18, state.Rmajor);
+
+  lightA.position.set(0, state.h * 0.7, 0);
+  lightB.position.set(0, -state.h * 0.7, 0);
+  lightP.position.set(0, 0.0, 0);
+  lightT.position.set(Math.cos(t * 0.4) * (torusMajor + 0.7), 0.35, Math.sin(t * 0.4) * (torusMajor + 0.7));
+
+  lightA.intensity = 3.9 + Math.sin(t * 2.1) * 0.8;
+  lightB.intensity = 3.9 + Math.cos(t * 1.8) * 0.8;
+  lightP.intensity = 1.3 + 0.9 * (1 - b) + Math.sin(t * 3.0) * 0.25;
+  lightT.intensity = 1.2 + 1.9 * b;
+
+  if (groups.pSphere) {
+    groups.pSphere.rotation.y += 0.002;
+  }
+  if (groups.torusGhost) {
+    groups.torusGhost.rotation.z += 0.0025;
+  }
+  if (groups.particles) {
+    groups.particles.rotation.y = t * 0.04;
+  }
+
+  const aPos = new THREE.Vector3(state.rA * 1.32, state.h * 0.5 + 0.22, 0);
+  const bPos = new THREE.Vector3(state.rB * 1.32, -state.h * 0.5 - 0.24, 0);
+  const pPos = new THREE.Vector3(0, 0.08, Math.max(0.35, rp * 0.7));
+
+  setLabel('lblA', aPos);
+  setLabel('lblB', bPos);
+  setLabel('lblP', pPos);
+
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  needsBuild = true;
+});
+
+setTopText(
+  PRESETS[0].title,
+  PRESETS[0].sub,
+  PRESETS[0].desc,
+  PRESETS[0].color
+);
+</script>
+</body>
+</html>
