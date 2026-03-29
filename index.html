@@ -305,6 +305,51 @@
     border-radius: 50%;
   }
 
+  /* Coming soon placeholder */
+  .coming-soon {
+    position: relative;
+    z-index: 1;
+    padding: 0 60px;
+    margin-bottom: 20px;
+  }
+
+  .coming-soon-inner {
+    border: 1px dashed rgba(201,168,76,0.15);
+    background: rgba(7,12,20,0.6);
+    padding: 48px 32px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .coming-soon-inner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(201,168,76,0.04) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .coming-soon-text {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    letter-spacing: 0.2em;
+    color: var(--gold-dim);
+    opacity: 0.6;
+  }
+
+  .coming-soon-sub {
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    margin-top: 10px;
+    text-transform: uppercase;
+  }
+
+  @media (max-width: 600px) {
+    .coming-soon { padding: 0 24px; }
+  }
+
   /* Fade-in animation */
   .card {
     animation: fadeUp 0.5s ease both;
@@ -343,9 +388,10 @@
   </div>
 </header>
 
+<!-- ═══════════════ SCIENCE ═══════════════ -->
 <div class="rule">
   <div class="rule-diamond"></div>
-  <div class="rule-label">Works</div>
+  <div class="rule-label">Science</div>
   <div class="rule-diamond"></div>
 </div>
 
@@ -368,7 +414,7 @@
     </div>
   </a>
 
-  <!-- Card 1: Harmonic Crystal -->
+  <!-- Harmonic Crystal -->
   <a class="card" href="harmonic-crystal.html">
     <div class="card-glow"></div>
     <div class="card-img-wrap">
@@ -387,8 +433,7 @@
     </div>
   </a>
 
-
-  <!-- Card 3: Shape Forge -->
+  <!-- GCM Shape Forge -->
   <a class="card" href="Glass_Corridor_Forge.html">
     <div class="card-glow"></div>
     <div class="card-img-wrap">
@@ -407,7 +452,7 @@
     </div>
   </a>
 
-  <!-- Card 4: Emergence Sandbox -->
+  <!-- Boundary-Driven Emergence -->
   <a class="card" href="GCM_Emergence_Sandbox.html">
     <div class="card-glow"></div>
     <div class="card-img-wrap">
@@ -426,26 +471,7 @@
     </div>
   </a>
 
-  <!-- Card 6: World Block Arena -->
-  <a class="card" href="blockbrawl.html">
-    <div class="card-glow"></div>
-    <div class="card-img-wrap">
-      <div class="card-placeholder">
-        <div class="card-placeholder-icon">⚔</div>
-      </div>
-      <div class="card-tag">Game · Playable</div>
-    </div>
-    <div class="card-body">
-      <div class="card-title">World Block Arena</div>
-      <div class="card-desc">A fully playable block brawler built in the browser. Amber-gold aesthetic, fast combat, built from scratch.</div>
-      <div class="card-footer">
-        <span class="card-date">2026</span>
-        <span class="card-arrow">→</span>
-      </div>
-    </div>
-  </a>
-
-  <!-- Card 5: Parametric Corridor Torus -->
+  <!-- Parametric Corridor Torus -->
   <a class="card" href="parametric_corridor_torus.html">
     <div class="card-glow"></div>
     <div class="card-img-wrap">
@@ -495,6 +521,78 @@
     <div class="card-body">
       <div class="card-title">GCM Chain Builder</div>
       <div class="card-desc">Walk the geometric evolution chain from point to Gen9. Each depth adds a corridor layer — P emerges at center, building toward the 120-cell and beyond.</div>
+      <div class="card-footer">
+        <span class="card-date">2026</span>
+        <span class="card-arrow">→</span>
+      </div>
+    </div>
+  </a>
+
+</div>
+
+<!-- ═══════════════ SCI-FI ═══════════════ -->
+<div class="rule">
+  <div class="rule-diamond"></div>
+  <div class="rule-label">Sci-Fi</div>
+  <div class="rule-diamond"></div>
+</div>
+
+<div class="coming-soon">
+  <div class="coming-soon-inner">
+    <div class="coming-soon-text">Transmissions Incoming</div>
+    <div class="coming-soon-sub">New worlds under construction</div>
+  </div>
+</div>
+
+<!-- ═══════════════ FANTASY ═══════════════ -->
+<div class="rule">
+  <div class="rule-diamond"></div>
+  <div class="rule-label">Fantasy</div>
+  <div class="rule-diamond"></div>
+</div>
+
+<div class="coming-soon">
+  <div class="coming-soon-inner">
+    <div class="coming-soon-text">Forging the Lore</div>
+    <div class="coming-soon-sub">Stories taking shape beyond the veil</div>
+  </div>
+</div>
+
+<!-- ═══════════════ FAITH ═══════════════ -->
+<div class="rule">
+  <div class="rule-diamond"></div>
+  <div class="rule-label">Faith</div>
+  <div class="rule-diamond"></div>
+</div>
+
+<div class="coming-soon">
+  <div class="coming-soon-inner">
+    <div class="coming-soon-text">Still Waters Run Deep</div>
+    <div class="coming-soon-sub">Reflections arriving soon</div>
+  </div>
+</div>
+
+<!-- ═══════════════ GAMES ═══════════════ -->
+<div class="rule">
+  <div class="rule-diamond"></div>
+  <div class="rule-label">Games</div>
+  <div class="rule-diamond"></div>
+</div>
+
+<div class="grid">
+
+  <!-- World Block Arena -->
+  <a class="card" href="blockbrawl.html">
+    <div class="card-glow"></div>
+    <div class="card-img-wrap">
+      <div class="card-placeholder">
+        <div class="card-placeholder-icon">⚔</div>
+      </div>
+      <div class="card-tag">Game · Playable</div>
+    </div>
+    <div class="card-body">
+      <div class="card-title">World Block Arena</div>
+      <div class="card-desc">A fully playable block brawler built in the browser. Amber-gold aesthetic, fast combat, built from scratch.</div>
       <div class="card-footer">
         <span class="card-date">2026</span>
         <span class="card-arrow">→</span>
