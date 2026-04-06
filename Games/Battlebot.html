@@ -1,0 +1,1663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BATTLEBOT // ARENA</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+
+:root {
+  --p1: #ff1744;
+  --p2: #00e5ff;
+  --bg: #0a0a0f;
+  --health-good: #00e676;
+  --health-mid: #ff9100;
+  --health-low: #ff1744;
+  --accent: #ff6d00;
+  --steel: #1a1a2e;
+  --glow: rgba(255,109,0,0.3);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  overflow: hidden;
+  font-family: 'Rajdhani', sans-serif;
+}
+
+#game-wrap {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+}
+#game-wrap canvas { display: block; width: 100%; height: 100%; }
+
+/* ── HUD ── */
+#hud {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+  z-index: 10;
+  background: linear-gradient(180deg, rgba(0,0,0,0.7) 0%, transparent 100%);
+}
+
+.player-hud {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 280px;
+}
+.player-hud.right { align-items: flex-end; }
+
+.player-name {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0 12px var(--glow);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.player-dot {
+  width: 8px; height: 8px;
+  border-radius: 2px;
+  display: inline-block;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.health-bar-bg {
+  width: 280px;
+  height: 14px;
+  background: rgba(255,255,255,0.06);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+  clip-path: polygon(0 0, 100% 0, 98% 100%, 2% 100%);
+}
+.health-bar {
+  height: 100%;
+  transition: width 0.3s, background-color 0.3s;
+  background: var(--health-good);
+  box-shadow: 0 0 10px currentColor;
+}
+
+.flip-warn {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #ff1744;
+  text-shadow: 0 0 8px rgba(255,23,68,0.8);
+  min-height: 18px;
+  animation: warnFlash 0.3s ease-in-out infinite alternate;
+}
+@keyframes warnFlash { from { opacity: 0.4; } to { opacity: 1; } }
+
+#center-hud {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+  z-index: 10;
+}
+#controls-hint {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.3);
+  text-shadow: 0 0 4px rgba(255,109,0,0.2);
+  transition: opacity 1s;
+  display: flex;
+  gap: 40px;
+  text-transform: uppercase;
+}
+.hint-side { white-space: pre; }
+
+/* ── OVERLAY ── */
+#overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(ellipse at center, rgba(10,10,15,0.85) 0%, rgba(0,0,0,0.95) 100%);
+  z-index: 20;
+  pointer-events: auto;
+}
+#overlay.hidden { display: none; }
+
+#overlay-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 56px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  color: #fff;
+  text-shadow: 0 0 40px rgba(255,109,0,0.6), 0 0 80px rgba(255,109,0,0.2);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+#overlay-sub {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  letter-spacing: 0.4em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 32px;
+  opacity: 0.7;
+}
+#overlay-prompt {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #fff;
+  text-transform: uppercase;
+  animation: promptGlow 1.2s ease-in-out infinite alternate;
+}
+@keyframes promptGlow {
+  from { text-shadow: 0 0 8px rgba(255,109,0,0.3); opacity: 0.5; }
+  to   { text-shadow: 0 0 20px rgba(255,109,0,0.8), 0 0 40px rgba(255,109,0,0.3); opacity: 1; }
+}
+
+/* Scanline overlay effect */
+#game-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 5;
+}
+</style>
+</head>
+<body>
+
+<div id="game-wrap"></div>
+
+<div id="hud">
+  <div class="player-hud">
+    <div class="player-name"><span class="player-dot" style="background:var(--p1)"></span> RED FLIPPER</div>
+    <div class="health-bar-bg"><div class="health-bar" id="hp1"></div></div>
+    <div class="flip-warn" id="flip1"></div>
+  </div>
+  <div class="player-hud right">
+    <div class="player-name">BLU SPINNER <span class="player-dot" style="background:var(--p2)"></span></div>
+    <div class="health-bar-bg"><div class="health-bar" id="hp2"></div></div>
+    <div class="flip-warn" id="flip2"></div>
+  </div>
+</div>
+
+<div id="center-hud">
+  <div id="controls-hint">
+    <span class="hint-side">P1: WASD + LShift // Q = Flip</span>
+    <span class="hint-side">P2: Arrows + RShift // . = Flip</span>
+  </div>
+</div>
+
+<div id="overlay">
+  <div id="overlay-title">BATTLEBOT</div>
+  <div id="overlay-sub">Combat Arena</div>
+  <div id="overlay-prompt">Press Space to Fight</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+<script>
+'use strict';
+
+// ─── CONSTANTS ───
+const FIXED_DT = 1 / 60;
+const MAX_SUB = 3;
+const DMG_THRESH = 2.5;
+const DMG_MULT = 2.5;
+const FLIP_KO_TIME = 5.0;
+const TABLE_W = 8, TABLE_D = 6, TABLE_H = 0.4;
+
+// ─── RENDERER ───
+const wrap = document.getElementById('game-wrap');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setClearColor(0x050508, 1);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+wrap.appendChild(renderer.domElement);
+
+// ─── SCENE / CAMERA / LIGHTS — Dark industrial arena ───
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x050508, 20, 45);
+
+const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+camera.position.set(0, 10, 12);
+camera.lookAt(0, 0.3, 0);
+
+// Dim ambient — dark arena, bots lit by spots
+scene.add(new THREE.AmbientLight(0x1a1a2e, 0.4));
+
+// Main overhead spot — harsh white like arena lighting
+const spotMain = new THREE.SpotLight(0xffffff, 1.2, 30, Math.PI * 0.3, 0.5, 1);
+spotMain.position.set(0, 14, 0);
+spotMain.castShadow = true;
+spotMain.shadow.mapSize.set(2048, 2048);
+spotMain.shadow.camera.near = 1;
+spotMain.shadow.camera.far = 25;
+spotMain.shadow.bias = -0.002;
+scene.add(spotMain);
+scene.add(spotMain.target);
+
+// Orange accent light from one side — BattleBots vibe
+const accentLight = new THREE.PointLight(0xff6d00, 0.6, 20);
+accentLight.position.set(-6, 5, -4);
+scene.add(accentLight);
+
+// Cool blue accent from the other side
+const coolLight = new THREE.PointLight(0x0088ff, 0.4, 20);
+coolLight.position.set(6, 5, 4);
+scene.add(coolLight);
+
+// Faint red underglow
+const underGlow = new THREE.PointLight(0xff1744, 0.2, 10);
+underGlow.position.set(0, 0.5, 0);
+scene.add(underGlow);
+
+// ─── PHYSICS WORLD ───
+const world = new CANNON.World();
+world.gravity.set(0, -9.82, 0);
+world.broadphase = new CANNON.SAPBroadphase(world);
+world.allowSleep = true;
+world.solver.iterations = 10;
+
+// Physics materials
+const matMetal  = new CANNON.Material('metal');
+const matPlastic = new CANNON.Material('plastic');
+const matRubber = new CANNON.Material('rubber');
+const matWood   = new CANNON.Material('wood');
+
+function addCM(a, b, friction, restitution) {
+  world.addContactMaterial(new CANNON.ContactMaterial(a, b, { friction, restitution }));
+}
+addCM(matMetal, matWood, 0.3, 0.2);
+addCM(matPlastic, matWood, 0.4, 0.3);
+addCM(matRubber, matWood, 0.9, 0.5);
+addCM(matMetal, matMetal, 0.25, 0.3);
+addCM(matMetal, matPlastic, 0.3, 0.25);
+addCM(matMetal, matRubber, 0.5, 0.3);
+addCM(matPlastic, matPlastic, 0.4, 0.35);
+addCM(matPlastic, matRubber, 0.6, 0.4);
+addCM(matRubber, matRubber, 0.95, 0.6);
+addCM(matWood, matWood, 0.5, 0.2);
+
+// Bot drive material — very low friction so cannon.js solver doesn't fight our drive physics.
+// We compute traction ourselves in applyControls. Cannon.js just handles collisions + gravity.
+const matBotDrive = new CANNON.Material('botDrive');
+addCM(matBotDrive, matWood, 0.01, 0.1);    // almost no friction with table — we handle traction
+addCM(matBotDrive, matBotDrive, 0.3, 0.4); // bot-on-bot collisions keep some friction
+addCM(matBotDrive, matMetal, 0.2, 0.3);
+addCM(matBotDrive, matRubber, 0.3, 0.4);
+
+const physMats = { metal: matMetal, plastic: matPlastic, rubber: matRubber, wood: matWood, botDrive: matBotDrive };
+
+// ─── ARENA ───
+function buildTable() {
+  // Arena platform — dark steel with subtle texture
+  const topGeo = new THREE.BoxGeometry(TABLE_W, TABLE_H, TABLE_D);
+  const topMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.4, metalness: 0.8 });
+  const topMesh = new THREE.Mesh(topGeo, topMat);
+  topMesh.position.set(0, 0, 0);
+  topMesh.receiveShadow = true;
+  topMesh.castShadow = true;
+  scene.add(topMesh);
+
+  const topBody = new CANNON.Body({ mass: 0, material: matWood });
+  topBody.addShape(new CANNON.Box(new CANNON.Vec3(TABLE_W / 2, TABLE_H / 2, TABLE_D / 2)));
+  topBody.position.set(0, 0, 0);
+  world.addBody(topBody);
+
+  // Hazard stripe edge rails
+  const railH = 0.12, railW = 0.1;
+  const railMat = new THREE.MeshStandardMaterial({ color: 0xff6d00, roughness: 0.5, metalness: 0.6, emissive: 0xff3300, emissiveIntensity: 0.15 });
+  for (const z of [-TABLE_D / 2, TABLE_D / 2]) {
+    const g = new THREE.BoxGeometry(TABLE_W + 0.2, railH, railW);
+    const m = new THREE.Mesh(g, railMat);
+    m.position.set(0, TABLE_H / 2 + railH / 2, z);
+    m.castShadow = true;
+    scene.add(m);
+  }
+  for (const x of [-TABLE_W / 2, TABLE_W / 2]) {
+    const g = new THREE.BoxGeometry(railW, railH, TABLE_D + 0.2);
+    const m = new THREE.Mesh(g, railMat);
+    m.position.set(x, TABLE_H / 2 + railH / 2, 0);
+    m.castShadow = true;
+    scene.add(m);
+  }
+
+  // Corner pylons (orange glowing)
+  const pylonGeo = new THREE.CylinderGeometry(0.12, 0.15, 0.4, 6);
+  const pylonMat = new THREE.MeshStandardMaterial({ color: 0xff6d00, roughness: 0.3, metalness: 0.7, emissive: 0xff4400, emissiveIntensity: 0.3 });
+  for (const [x, z] of [[-TABLE_W/2, -TABLE_D/2], [TABLE_W/2, -TABLE_D/2], [-TABLE_W/2, TABLE_D/2], [TABLE_W/2, TABLE_D/2]]) {
+    const p = new THREE.Mesh(pylonGeo, pylonMat);
+    p.position.set(x, TABLE_H / 2 + 0.2, z);
+    p.castShadow = true;
+    scene.add(p);
+  }
+
+  // Steel support pillars
+  const legGeo = new THREE.CylinderGeometry(0.2, 0.25, 4, 8);
+  const legMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.3, metalness: 0.9 });
+  for (const [x, z] of [[-3.5, -2.5], [3.5, -2.5], [-3.5, 2.5], [3.5, 2.5]]) {
+    const leg = new THREE.Mesh(legGeo, legMat);
+    leg.position.set(x, -2, z);
+    leg.castShadow = true;
+    scene.add(leg);
+  }
+
+  // Dark floor below
+  const floorGeo = new THREE.PlaneGeometry(50, 50);
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x080808, roughness: 0.95, metalness: 0.1 });
+  const floor = new THREE.Mesh(floorGeo, floorMat);
+  floor.rotation.x = -Math.PI / 2;
+  floor.position.y = -4.1;
+  floor.receiveShadow = true;
+  scene.add(floor);
+
+  const floorBody = new CANNON.Body({ mass: 0, material: matWood });
+  floorBody.addShape(new CANNON.Plane());
+  floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
+  floorBody.position.set(0, -4.1, 0);
+  world.addBody(floorBody);
+
+  // Center cross marking on arena surface
+  const markMat = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.5, metalness: 0.6 });
+  const markH = new THREE.Mesh(new THREE.BoxGeometry(3, 0.005, 0.04), markMat);
+  markH.position.set(0, TABLE_H / 2 + 0.003, 0);
+  scene.add(markH);
+  const markV = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.005, 2), markMat);
+  markV.position.set(0, TABLE_H / 2 + 0.003, 0);
+  scene.add(markV);
+}
+
+// ─── GCB LATTICE CONSTANTS ───
+const S32 = Math.sqrt(3) / 2;
+const S23 = Math.sqrt(2 / 3);
+const S36 = Math.sqrt(3) / 6;
+const GCB_SCALE = 0.18;
+const BTHR = 1.05;
+
+// GCB offset sliders — 0 = cubic, 1 = full triangular close-packed
+const GCB_H = 0;
+const GCB_V = 0;
+
+// ─── WEDGE DIMENSIONS (in game units) ───
+const WEDGE_LEN = 1.6;   // length (front to back)
+const WEDGE_W   = 1.0;   // width
+const WEDGE_H_BACK = 0.6; // height at back
+const WEDGE_H_FRONT = 0.06; // height at front tip (thin blade)
+
+// ─── BUILD GCB LATTICE INSIDE A WEDGE SHAPE ───
+function buildGCBWedge() {
+  // Generate full 8x8x8 lattice using GCB formula
+  const rowYSpace   = 1.0 + Math.abs(GCB_H) * (S32 - 1.0);
+  const layerZSpace = 1.0 + Math.abs(GCB_V) * (S23 - 1.0);
+
+  const rawPts = [];
+  for (let k = 0; k < 8; k++) {
+    for (let j = 0; j < 8; j++) {
+      for (let i = 0; i < 8; i++) {
+        let x = i + GCB_H * 0.5 * (j % 2);
+        let y = j * rowYSpace;
+        if (k % 2 === 1) { x += GCB_V * 0.5; y += GCB_V * S36; }
+        const z = k * layerZSpace;
+        rawPts.push({ x, y, z, i, j, k });
+      }
+    }
+  }
+
+  // Center lattice at origin
+  let cx = 0, cy = 0, cz = 0;
+  for (const p of rawPts) { cx += p.x; cy += p.y; cz += p.z; }
+  cx /= rawPts.length; cy /= rawPts.length; cz /= rawPts.length;
+  for (const p of rawPts) { p.x -= cx; p.y -= cy; p.z -= cz; }
+
+  // Find lattice bounding box for normalization
+  let lxMin = Infinity, lxMax = -Infinity;
+  let lyMin = Infinity, lyMax = -Infinity;
+  let lzMin = Infinity, lzMax = -Infinity;
+  for (const p of rawPts) {
+    if (p.x < lxMin) lxMin = p.x; if (p.x > lxMax) lxMax = p.x;
+    if (p.y < lyMin) lyMin = p.y; if (p.y > lyMax) lyMax = p.y;
+    if (p.z < lzMin) lzMin = p.z; if (p.z > lzMax) lzMax = p.z;
+  }
+
+  // Map lattice into wedge volume:
+  // lattice x -> game X (length), lattice y -> game Z (width), lattice z -> game Y (height)
+  // Then clip: at each X position, max Y follows the ramp slope
+  const pts = [];   // game-space points inside the wedge
+  const bonds = [];
+
+  for (const p of rawPts) {
+    // Normalize to 0..1
+    const nx = (p.x - lxMin) / (lxMax - lxMin);
+    const ny = (p.y - lyMin) / (lyMax - lyMin);
+    const nz = (p.z - lzMin) / (lzMax - lzMin);
+
+    // Map to game coords — rear lifted by wheel radius, front on table
+    const rearLift = 0.22; // wheelRadius
+    const gx = (nx - 0.5) * WEDGE_LEN;             // centered on X
+    const gz = (ny - 0.5) * WEDGE_W;                // centered on Z
+    const floorY = rearLift * (1 - nx);             // rear=rearLift, front=0
+    const maxH = WEDGE_H_BACK + nx * (WEDGE_H_FRONT - WEDGE_H_BACK);
+    const gy = floorY + nz * maxH;                  // floor + height within wedge
+
+    pts.push({ x: gx, y: gy, z: gz, id: pts.length });
+  }
+
+  // Find bonds (edges between nearby points in game space)
+  // Scale BTHR to match the game-space point spacing
+  const avgSpacing = WEDGE_LEN / 7; // approximate spacing between adjacent lattice points
+  const bondThresh = avgSpacing * 1.15;
+
+  for (let a = 0; a < pts.length; a++) {
+    for (let b = a + 1; b < pts.length; b++) {
+      const dx = pts[a].x - pts[b].x;
+      const dy = pts[a].y - pts[b].y;
+      const dz = pts[a].z - pts[b].z;
+      if (Math.sqrt(dx * dx + dy * dy + dz * dz) < bondThresh) {
+        bonds.push([a, b]);
+      }
+    }
+  }
+
+  return { pts, bonds };
+}
+
+// ─── FLIPPER CONSTANTS ───
+const FLIPPER_SPLIT = 0.35;       // front 35% of wedge length is the flipper
+const FLIPPER_FORCE = 25;         // upward impulse force (N·s) — scaled Bronco
+const FLIPPER_MAX_ANGLE = 2.0;    // radians (~115 degrees)
+const FLIPPER_FIRE_SPEED = 15;    // rad/s — how fast the arm swings up
+const FLIPPER_RETRACT_SPEED = 3;  // rad/s — slow retract
+const FLIPPER_COOLDOWN = 2.5;     // seconds between flips (CO2 recharge)
+const FLIPPER_CHARGES = 6;        // limited gas — like a real CO2 tank
+
+// ─── BUILD WEDGE SURFACE — split into body + flipper ───
+function buildWedgeSurfaces(color) {
+  const hb = WEDGE_H_BACK;
+  const hf = WEDGE_H_FRONT;
+  const hl = WEDGE_LEN / 2;
+  const hw = WEDGE_W / 2;
+  const rearLift = 0.22;
+
+  // Hinge line X position — where flipper meets body
+  const hingeX = hl - WEDGE_LEN * FLIPPER_SPLIT;
+  // Height at hinge point (interpolated along the ramp)
+  const hingeFrac = (hingeX + hl) / WEDGE_LEN; // 0=back, 1=front
+  const hingeFloorY = rearLift * (1 - hingeFrac);
+  const hingeTopY = hingeFloorY + hb + hingeFrac * (hf - hb);
+  const hingeBottomY = hingeFloorY;
+
+  // ── Main body (rear portion: back to hinge) ──
+  const BL_b = [-hl, rearLift,      -hw];
+  const BR_b = [-hl, rearLift,       hw];
+  const TL_b = [-hl, rearLift + hb, -hw];
+  const TR_b = [-hl, rearLift + hb,  hw];
+
+  const BL_h = [hingeX, hingeBottomY, -hw];
+  const BR_h = [hingeX, hingeBottomY,  hw];
+  const TL_h = [hingeX, hingeTopY,    -hw];
+  const TR_h = [hingeX, hingeTopY,     hw];
+
+  const bodyFaces = [
+    // Bottom
+    [BL_b, BR_b, BR_h], [BL_b, BR_h, BL_h],
+    // Back
+    [BL_b, TL_b, TR_b], [BL_b, TR_b, BR_b],
+    // Hinge face (front of body section)
+    [BL_h, BR_h, TR_h], [BL_h, TR_h, TL_h],
+    // Left
+    [BL_b, BL_h, TL_h], [BL_b, TL_h, TL_b],
+    // Right
+    [BR_b, TR_b, TR_h], [BR_b, TR_h, BR_h],
+    // Top
+    [TL_b, TR_b, TR_h], [TL_b, TR_h, TL_h],
+  ];
+
+  const bodyVerts = [];
+  for (const tri of bodyFaces) for (const v of tri) bodyVerts.push(v[0], v[1], v[2]);
+
+  const bodyGeo = new THREE.BufferGeometry();
+  bodyGeo.setAttribute('position', new THREE.Float32BufferAttribute(bodyVerts, 3));
+  bodyGeo.computeVertexNormals();
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color: color, roughness: 0.3, metalness: 0.7,
+    side: THREE.DoubleSide, transparent: true, opacity: 0.85,
+  });
+  const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+  bodyMesh.castShadow = true;
+  bodyMesh.receiveShadow = true;
+
+  // ── Flipper arm (hinge to front tip) ──
+  // Defined in LOCAL space relative to hinge pivot point
+  // Hinge is at (hingeX, hingeBottomY, 0) — flipper rotates around Z axis at this point
+  const fLen = hl - hingeX; // length of flipper section
+  const BL_fl = [0, 0, -hw];  // local hinge bottom-left
+  const BR_fl = [0, 0,  hw];
+  const TL_fl = [0, hingeTopY - hingeBottomY, -hw];
+  const TR_fl = [0, hingeTopY - hingeBottomY,  hw];
+  const BL_ft = [fLen, -hingeBottomY, -hw]; // front tip (drops to y=0 world, so local = -hingeBottomY)
+  const BR_ft = [fLen, -hingeBottomY,  hw];
+  const TL_ft = [fLen, hf - hingeBottomY, -hw];
+  const TR_ft = [fLen, hf - hingeBottomY,  hw];
+
+  const flipFaces = [
+    // Bottom
+    [BL_fl, BR_fl, BR_ft], [BL_fl, BR_ft, BL_ft],
+    // Front tip
+    [BL_ft, BR_ft, TR_ft], [BL_ft, TR_ft, TL_ft],
+    // Left
+    [BL_fl, BL_ft, TL_ft], [BL_fl, TL_ft, TL_fl],
+    // Right
+    [BR_fl, TR_fl, TR_ft], [BR_fl, TR_ft, BR_ft],
+    // Top
+    [TL_fl, TR_fl, TR_ft], [TL_fl, TR_ft, TL_ft],
+  ];
+
+  const flipVerts = [];
+  for (const tri of flipFaces) for (const v of tri) flipVerts.push(v[0], v[1], v[2]);
+
+  const flipGeo = new THREE.BufferGeometry();
+  flipGeo.setAttribute('position', new THREE.Float32BufferAttribute(flipVerts, 3));
+  flipGeo.computeVertexNormals();
+
+  // Flipper is slightly different color — lighter, metallic
+  const flipColor = new THREE.Color(color).multiplyScalar(1.3);
+  const flipMat = new THREE.MeshStandardMaterial({
+    color: flipColor, roughness: 0.25, metalness: 0.85,
+    side: THREE.DoubleSide, transparent: true, opacity: 0.9,
+  });
+  const flipMesh = new THREE.Mesh(flipGeo, flipMat);
+  flipMesh.castShadow = true;
+  flipMesh.receiveShadow = true;
+
+  // Flipper pivot group — rotates around the hinge line (Z axis at hinge position)
+  const flipperPivot = new THREE.Group();
+  flipperPivot.position.set(hingeX, hingeBottomY, 0);
+  flipperPivot.add(flipMesh);
+
+  // Hinge pin visual (small cylinder along Z at hinge)
+  const pinGeo = new THREE.CylinderGeometry(0.015, 0.015, hw * 2.1, 6);
+  pinGeo.rotateX(Math.PI / 2);
+  const pinMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, roughness: 0.2, metalness: 0.9 });
+  const pin = new THREE.Mesh(pinGeo, pinMat);
+  flipperPivot.add(pin);
+
+  return { bodyMesh, flipperPivot, flipMesh, hingeX, hingeBottomY };
+}
+
+// ─── BUILD SPINNER WEDGE (forked chassis with disc slot) ───
+// Like Bite Force / End Game: two fork prongs at the front with a vertical disc between them
+const SPINNER_DISC_R = 0.22;       // disc radius — protrudes above the wedge
+const SPINNER_DISC_THICK = 0.035;  // disc thickness
+const SPINNER_SLOT_W = 0.08;       // gap width in chassis for disc to pass through
+const SPINNER_MAX_RPM = 200;       // rad/s (~1900 RPM) — takes time to spin up
+const SPINNER_SPINUP = 40;         // rad/s² acceleration
+const SPINNER_HIT_ENERGY = 20;     // impulse multiplier on contact
+const SPINNER_DISC_MASS = 0.3;     // kg — disc stores kinetic energy = 0.5 * I * ω²
+
+function buildSpinnerSurfaces(color) {
+  const hb = WEDGE_H_BACK, hf = WEDGE_H_FRONT;
+  const hl = WEDGE_LEN / 2, hw = WEDGE_W / 2;
+  const rearLift = 0.22;
+  const slotHalf = SPINNER_SLOT_W / 2;
+
+  // Disc position — at the front, centered
+  const discX = hl * 0.5; // front half of bot
+  // Disc center sits AT the top ramp surface — only the top half protrudes
+  // Bottom half is enclosed inside the chassis body (protected, can't hit from below)
+  const discFrac = (discX + hl) / WEDGE_LEN; // 0=back, 1=front
+  const rampTopAtDisc = rearLift * (1 - discFrac) + hb + discFrac * (hf - hb);
+  const discY = rampTopAtDisc; // center flush with ramp — top half exposed, bottom half inside
+
+  // Build the full body as one solid piece (like the flipper's body section)
+  // but with the slot cut out of the front — two fork prongs
+  const BL_b = [-hl, rearLift, -hw], BR_b = [-hl, rearLift, hw];
+  const TL_b = [-hl, rearLift+hb, -hw], TR_b = [-hl, rearLift+hb, hw];
+  const BL_f = [hl, 0, -hw], BR_f = [hl, 0, hw];
+  const TL_f = [hl, hf, -hw], TR_f = [hl, hf, hw];
+
+  // Slot inner edges (where the disc sits)
+  const slotFrac = (discX + hl) / WEDGE_LEN;
+  const slotFloorY = rearLift * (1 - slotFrac);
+  const slotTopY = slotFloorY + hb + slotFrac * (hf - hb);
+
+  const BL_sl = [discX - 0.15, slotFloorY, -slotHalf];
+  const BR_sl = [discX - 0.15, slotFloorY,  slotHalf];
+  const TL_sl = [discX - 0.15, slotTopY,   -slotHalf];
+  const TR_sl = [discX - 0.15, slotTopY,    slotHalf];
+
+  // Left fork (z < -slotHalf) — full wedge shape on left side
+  // Right fork (z > slotHalf) — full wedge shape on right side
+  // Build as a single mesh — left fork + right fork + rear body
+
+  function makeForkFaces(zInner, zOuter) {
+    // A wedge slice from back to front, between zInner and zOuter
+    const bi = Math.abs(zInner), bo = Math.abs(zOuter);
+    const zi = zInner, zo = zOuter;
+    return [
+      // Bottom
+      [[-hl, rearLift, zi], [-hl, rearLift, zo], [hl, 0, zo]], [[-hl, rearLift, zi], [hl, 0, zo], [hl, 0, zi]],
+      // Top ramp
+      [[-hl, rearLift+hb, zi], [-hl, rearLift+hb, zo], [hl, hf, zo]], [[-hl, rearLift+hb, zi], [hl, hf, zo], [hl, hf, zi]],
+      // Outer side
+      [[-hl, rearLift, zo], [-hl, rearLift+hb, zo], [hl, hf, zo]], [[-hl, rearLift, zo], [hl, hf, zo], [hl, 0, zo]],
+      // Inner side (facing slot)
+      [[-hl, rearLift, zi], [hl, 0, zi], [hl, hf, zi]], [[-hl, rearLift, zi], [hl, hf, zi], [-hl, rearLift+hb, zi]],
+    ];
+  }
+
+  const allFaces = [
+    // Left fork
+    ...makeForkFaces(-hw, -slotHalf),
+    // Right fork
+    ...makeForkFaces(slotHalf, hw),
+    // Back face
+    [BL_b, TL_b, TR_b], [BL_b, TR_b, BR_b],
+    // Front left tip
+    [[hl, 0, -hw], [hl, 0, -slotHalf], [hl, hf, -slotHalf]], [[hl, 0, -hw], [hl, hf, -slotHalf], [hl, hf, -hw]],
+    // Front right tip
+    [[hl, 0, slotHalf], [hl, 0, hw], [hl, hf, hw]], [[hl, 0, slotHalf], [hl, hf, hw], [hl, hf, slotHalf]],
+  ];
+
+  const verts = [];
+  for (const tri of allFaces) for (const v of tri) verts.push(v[0], v[1], v[2]);
+
+  const bodyGeo = new THREE.BufferGeometry();
+  bodyGeo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+  bodyGeo.computeVertexNormals();
+  const bodyMat = new THREE.MeshStandardMaterial({
+    color: color, roughness: 0.3, metalness: 0.7,
+    side: THREE.DoubleSide, transparent: true, opacity: 0.85,
+  });
+  const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+  bodyMesh.castShadow = true;
+  bodyMesh.receiveShadow = true;
+
+  // ── Spinning disc (lattice-style) ──
+  const discGroup = new THREE.Group();
+  discGroup.position.set(discX, discY, 0);
+
+  // Solid disc
+  const discGeo = new THREE.CylinderGeometry(SPINNER_DISC_R, SPINNER_DISC_R, SPINNER_DISC_THICK, 20);
+  // Disc spins in the XY plane (vertical), so rotate to stand upright
+  // Default cylinder is along Y. We want it along Z so it spins in XY plane.
+  // Actually we want it standing vertical spinning around Z axis...
+  // The disc plane should be XY (vertical), thickness along Z.
+  discGeo.rotateX(Math.PI / 2);
+  const discMat = new THREE.MeshStandardMaterial({
+    color: 0xcccccc, roughness: 0.15, metalness: 0.95,
+    emissive: 0x222222, emissiveIntensity: 0.1,
+  });
+  const discMesh = new THREE.Mesh(discGeo, discMat);
+  discMesh.castShadow = true;
+  discGroup.add(discMesh);
+
+  // Disc lattice pattern (spokes + rings on the face)
+  const discPts = [], discBonds = [];
+  const dSpokes = 6, dRings = 3;
+  for (let ri = 0; ri < dRings; ri++) {
+    const r = SPINNER_DISC_R * ((ri + 1) / dRings);
+    for (let si = 0; si < dSpokes; si++) {
+      const a = (si / dSpokes) * Math.PI * 2;
+      discPts.push({ x: Math.cos(a) * r, y: Math.sin(a) * r, z: 0 });
+    }
+  }
+  discPts.push({ x: 0, y: 0, z: 0 }); // center
+  const centerIdx = discPts.length - 1;
+  for (let ri = 0; ri < dRings; ri++) {
+    for (let si = 0; si < dSpokes; si++) {
+      const cur = ri * dSpokes + si;
+      const next = ri * dSpokes + (si + 1) % dSpokes;
+      discBonds.push([cur, next]); // ring
+      if (ri === 0) discBonds.push([cur, centerIdx]); // spoke to center
+      if (ri < dRings - 1) discBonds.push([cur, cur + dSpokes]); // radial
+    }
+  }
+  // Two teeth (asymmetric impact points — like Bite Force's bar)
+  const toothLen = 0.04;
+  for (const angle of [0, Math.PI]) {
+    const tx = Math.cos(angle) * (SPINNER_DISC_R + toothLen);
+    const ty = Math.sin(angle) * (SPINNER_DISC_R + toothLen);
+    const tIdx = discPts.length;
+    discPts.push({ x: tx, y: ty, z: 0 });
+    // Connect tooth to nearest outer ring point
+    const outerBase = (dRings - 1) * dSpokes + (angle === 0 ? 0 : dSpokes / 2);
+    discBonds.push([tIdx, outerBase]);
+  }
+
+  const dLineVerts = new Float32Array(discBonds.length * 6);
+  for (let i = 0; i < discBonds.length; i++) {
+    const [a, b] = discBonds[i];
+    dLineVerts[i*6]=discPts[a].x; dLineVerts[i*6+1]=discPts[a].y; dLineVerts[i*6+2]=discPts[a].z;
+    dLineVerts[i*6+3]=discPts[b].x; dLineVerts[i*6+4]=discPts[b].y; dLineVerts[i*6+5]=discPts[b].z;
+  }
+  const dLineGeo = new THREE.BufferGeometry();
+  dLineGeo.setAttribute('position', new THREE.BufferAttribute(dLineVerts, 3));
+  discGroup.add(new THREE.LineSegments(dLineGeo, new THREE.LineBasicMaterial({
+    color: 0x666666, transparent: true, opacity: 0.7,
+  })));
+
+  return { bodyMesh, discGroup, discMesh, discX, discY, rampTopAtDisc };
+}
+
+// ─── GCB BOT CREATION ───
+function createGCBBot(color, spawnPos, spawnRotY, weaponType) {
+  const wedge = buildGCBWedge();
+  const pts = wedge.pts;
+  const group = new THREE.Group();
+
+  // 1. Solid wedge surface — weapon-specific build
+  let surf = null, spinnerSurf = null;
+  if (weaponType === 'spinner') {
+    spinnerSurf = buildSpinnerSurfaces(color);
+    group.add(spinnerSurf.bodyMesh);
+    group.add(spinnerSurf.discGroup);
+  } else {
+    surf = buildWedgeSurfaces(color);
+    group.add(surf.bodyMesh);
+    group.add(surf.flipperPivot);
+  }
+
+  // 2. Internal lattice wireframe (bonds as lines, visible through semi-transparent surface)
+  const lineVerts = new Float32Array(wedge.bonds.length * 6);
+  for (let i = 0; i < wedge.bonds.length; i++) {
+    const [a, b] = wedge.bonds[i];
+    const pa = pts[a], pb = pts[b];
+    lineVerts[i * 6]     = pa.x; lineVerts[i * 6 + 1] = pa.y; lineVerts[i * 6 + 2] = pa.z;
+    lineVerts[i * 6 + 3] = pb.x; lineVerts[i * 6 + 4] = pb.y; lineVerts[i * 6 + 5] = pb.z;
+  }
+  const lineGeo = new THREE.BufferGeometry();
+  lineGeo.setAttribute('position', new THREE.BufferAttribute(lineVerts, 3));
+
+  // Darken the wireframe color relative to bot color
+  const wireColor = new THREE.Color(color).multiplyScalar(0.3);
+  const wireframe = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({
+    color: wireColor,
+    transparent: true,
+    opacity: 0.5,
+  }));
+  group.add(wireframe);
+
+  // 3. Lattice point dots
+  const dotPositions = new Float32Array(pts.length * 3);
+  for (let i = 0; i < pts.length; i++) {
+    dotPositions[i * 3]     = pts[i].x;
+    dotPositions[i * 3 + 1] = pts[i].y;
+    dotPositions[i * 3 + 2] = pts[i].z;
+  }
+  const dotGeo = new THREE.BufferGeometry();
+  dotGeo.setAttribute('position', new THREE.BufferAttribute(dotPositions, 3));
+  const dots = new THREE.Points(dotGeo, new THREE.PointsMaterial({
+    color: new THREE.Color(color).multiplyScalar(1.5),
+    size: 0.025,
+    sizeAttenuation: true,
+  }));
+  group.add(dots);
+
+  // 4. Motors + Wheels — two lattice cylinders, 90% back, symmetrical, with rubber combat wheels
+  // The wheels are the contact point with the table. Wheel bottom = y=0 local.
+  // The wedge body is lifted so rear rides on wheels, front tip scrapes the table.
+  const wheelMeshes = []; // [left, right] — for spinning animation
+  const motorRadius = 0.08;
+  const motorLen = 0.18;
+  const axleLen = 0.06;
+  const wheelRadius = 0.22;
+  const wheelWidth = 0.12;
+  // Wheels lift the rear: the rear of the wedge is raised by wheelRadius
+  // The wedge visual is shifted up so wheel centers sit at y=wheelRadius
+  const rearLift = wheelRadius; // how much the back is raised off the table
+  const motorX = -WEDGE_LEN / 2 + WEDGE_LEN * 0.1; // 90% back
+  const motorY = wheelRadius;                         // wheel center height = wheel sits on table
+  const motorZoffset = WEDGE_W / 2 + axleLen + wheelWidth * 0.5; // wheels stick out past the body sides
+
+  for (const side of [-1, 1]) {
+    const mz = side * motorZoffset;
+    const motorGroup = new THREE.Group();
+    motorGroup.position.set(motorX, motorY, mz);
+
+    // Motor cylinder body (lattice-style: rings of points connected by bonds)
+    const mPts = [];
+    const mBonds = [];
+    const rings = 6;
+    const segs = 10;
+    for (let ri = 0; ri < rings; ri++) {
+      const lz = (ri / (rings - 1) - 0.5) * motorLen; // local Z along motor axis
+      for (let si = 0; si < segs; si++) {
+        const angle = (si / segs) * Math.PI * 2;
+        const lx = Math.cos(angle) * motorRadius;
+        const ly = Math.sin(angle) * motorRadius;
+        mPts.push({ x: lx, y: ly, z: lz });
+      }
+    }
+    // Center point at each end
+    mPts.push({ x: 0, y: 0, z: -motorLen / 2 }); // inner end cap center
+    mPts.push({ x: 0, y: 0, z:  motorLen / 2 }); // outer end cap center
+
+    // Bonds: ring connections + longitudinal + end caps
+    for (let ri = 0; ri < rings; ri++) {
+      for (let si = 0; si < segs; si++) {
+        const cur = ri * segs + si;
+        const next = ri * segs + (si + 1) % segs;
+        mBonds.push([cur, next]); // ring
+        if (ri < rings - 1) {
+          mBonds.push([cur, cur + segs]); // longitudinal
+          mBonds.push([cur, (ri + 1) * segs + (si + 1) % segs]); // diagonal
+        }
+      }
+    }
+    // End cap bonds (first ring -> inner center, last ring -> outer center)
+    const innerCenter = rings * segs;
+    const outerCenter = rings * segs + 1;
+    for (let si = 0; si < segs; si++) {
+      mBonds.push([si, innerCenter]);
+      mBonds.push([(rings - 1) * segs + si, outerCenter]);
+    }
+
+    // Draw motor wireframe
+    const mLineVerts = new Float32Array(mBonds.length * 6);
+    for (let i = 0; i < mBonds.length; i++) {
+      const [a, b] = mBonds[i];
+      mLineVerts[i * 6]     = mPts[a].x; mLineVerts[i * 6 + 1] = mPts[a].y; mLineVerts[i * 6 + 2] = mPts[a].z;
+      mLineVerts[i * 6 + 3] = mPts[b].x; mLineVerts[i * 6 + 4] = mPts[b].y; mLineVerts[i * 6 + 5] = mPts[b].z;
+    }
+    const mLineGeo = new THREE.BufferGeometry();
+    mLineGeo.setAttribute('position', new THREE.BufferAttribute(mLineVerts, 3));
+    const mWire = new THREE.LineSegments(mLineGeo, new THREE.LineBasicMaterial({
+      color: 0x888888, transparent: true, opacity: 0.7,
+    }));
+    motorGroup.add(mWire);
+
+    // Motor lattice dots
+    const mDotPos = new Float32Array(mPts.length * 3);
+    for (let i = 0; i < mPts.length; i++) {
+      mDotPos[i * 3] = mPts[i].x; mDotPos[i * 3 + 1] = mPts[i].y; mDotPos[i * 3 + 2] = mPts[i].z;
+    }
+    const mDotGeo = new THREE.BufferGeometry();
+    mDotGeo.setAttribute('position', new THREE.BufferAttribute(mDotPos, 3));
+    motorGroup.add(new THREE.Points(mDotGeo, new THREE.PointsMaterial({
+      color: 0xcccccc, size: 0.018, sizeAttenuation: true,
+    })));
+
+    // Semi-transparent motor shell
+    const shellGeo = new THREE.CylinderGeometry(motorRadius, motorRadius, motorLen, segs);
+    shellGeo.rotateX(Math.PI / 2); // align along Z
+    const shellMat = new THREE.MeshStandardMaterial({
+      color: 0x555555, roughness: 0.4, metalness: 0.9,
+      transparent: true, opacity: 0.4, side: THREE.DoubleSide,
+    });
+    const shell = new THREE.Mesh(shellGeo, shellMat);
+    shell.castShadow = true;
+    motorGroup.add(shell);
+
+    // Attach point — axle stub poking outside the bot
+    const axleGeo = new THREE.CylinderGeometry(0.02, 0.02, axleLen + 0.02, 6);
+    axleGeo.rotateX(Math.PI / 2); // align along Z
+    const axleMat = new THREE.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.2, metalness: 0.9 });
+    const axle = new THREE.Mesh(axleGeo, axleMat);
+    axle.position.z = side * (motorLen / 2 + axleLen / 2); // poke outward
+    axle.castShadow = true;
+    motorGroup.add(axle);
+
+    // Attach point dot (bright yellow sphere at the tip)
+    const attachGeo = new THREE.SphereGeometry(0.025, 8, 8);
+    const attachMat = new THREE.MeshStandardMaterial({ color: 0xffdd00, roughness: 0.1, metalness: 1.0, emissive: 0xffaa00, emissiveIntensity: 0.5 });
+    const attachDot = new THREE.Mesh(attachGeo, attachMat);
+    attachDot.position.z = side * (motorLen / 2 + axleLen + 0.01);
+    motorGroup.add(attachDot);
+
+    // ── RUBBER COMBAT WHEEL on the attach point ──
+    // Uses wheelRadius and wheelWidth from outer scope (0.22 and 0.12)
+    const wheelZ = side * (motorLen / 2 + axleLen + 0.01 + wheelWidth / 2);
+
+    const wheelGroup = new THREE.Group();
+    wheelGroup.position.set(0, 0, wheelZ);
+
+    // Wheel tire (rubber, dark with tread pattern via lattice)
+    const tireGeo = new THREE.CylinderGeometry(wheelRadius, wheelRadius, wheelWidth, 16);
+    tireGeo.rotateX(Math.PI / 2); // align along Z axis
+    const tireMat = new THREE.MeshStandardMaterial({
+      color: 0x222222, roughness: 0.95, metalness: 0.05,
+    });
+    const tire = new THREE.Mesh(tireGeo, tireMat);
+    tire.castShadow = true;
+    wheelGroup.add(tire);
+
+    // Wheel hub (metallic center)
+    const hubGeo = new THREE.CylinderGeometry(wheelRadius * 0.4, wheelRadius * 0.4, wheelWidth + 0.01, 8);
+    hubGeo.rotateX(Math.PI / 2);
+    const hubMat = new THREE.MeshStandardMaterial({ color: 0x999999, roughness: 0.3, metalness: 0.8 });
+    const hub = new THREE.Mesh(hubGeo, hubMat);
+    wheelGroup.add(hub);
+
+    // Tread lattice (spokes + ring pattern on the tire surface)
+    const treadPts = [];
+    const treadBonds = [];
+    const spokes = 8;
+    const treadRings = 3;
+    for (let ri = 0; ri < treadRings; ri++) {
+      const tz = (ri / (treadRings - 1) - 0.5) * wheelWidth;
+      for (let si = 0; si < spokes; si++) {
+        const a = (si / spokes) * Math.PI * 2;
+        treadPts.push({ x: Math.cos(a) * wheelRadius, y: Math.sin(a) * wheelRadius, z: tz });
+        // Inner ring (hub)
+        treadPts.push({ x: Math.cos(a) * wheelRadius * 0.4, y: Math.sin(a) * wheelRadius * 0.4, z: tz });
+      }
+    }
+    // Bonds: spokes (inner to outer), outer ring, inner ring, longitudinal
+    for (let ri = 0; ri < treadRings; ri++) {
+      for (let si = 0; si < spokes; si++) {
+        const outerIdx = ri * spokes * 2 + si * 2;
+        const innerIdx = outerIdx + 1;
+        const nextOuter = ri * spokes * 2 + ((si + 1) % spokes) * 2;
+        const nextInner = nextOuter + 1;
+        treadBonds.push([outerIdx, innerIdx]); // spoke
+        treadBonds.push([outerIdx, nextOuter]); // outer ring
+        treadBonds.push([innerIdx, nextInner]); // inner ring
+        if (ri < treadRings - 1) {
+          const nextRingOuter = (ri + 1) * spokes * 2 + si * 2;
+          treadBonds.push([outerIdx, nextRingOuter]); // longitudinal
+        }
+      }
+    }
+    const tLineVerts = new Float32Array(treadBonds.length * 6);
+    for (let i = 0; i < treadBonds.length; i++) {
+      const [a, b] = treadBonds[i];
+      tLineVerts[i*6]=treadPts[a].x; tLineVerts[i*6+1]=treadPts[a].y; tLineVerts[i*6+2]=treadPts[a].z;
+      tLineVerts[i*6+3]=treadPts[b].x; tLineVerts[i*6+4]=treadPts[b].y; tLineVerts[i*6+5]=treadPts[b].z;
+    }
+    const tLineGeo = new THREE.BufferGeometry();
+    tLineGeo.setAttribute('position', new THREE.BufferAttribute(tLineVerts, 3));
+    wheelGroup.add(new THREE.LineSegments(tLineGeo, new THREE.LineBasicMaterial({
+      color: 0x444444, transparent: true, opacity: 0.6,
+    })));
+
+    motorGroup.add(wheelGroup);
+    // Store reference for spinning (index 0 = left, 1 = right)
+    wheelMeshes.push(wheelGroup);
+
+    group.add(motorGroup);
+  }
+
+  // 5. Cannon.js physics body — exact wedge ConvexPolyhedron + wheel spheres
+  const hb = WEDGE_H_BACK, hf = WEDGE_H_FRONT;
+  const hl = WEDGE_LEN / 2, hw = WEDGE_W / 2;
+
+  const body = new CANNON.Body({ mass: BOT_MASS, linearDamping: 0.02, angularDamping: 0.05 });
+  body.allowSleep = false;
+  body.material = matBotDrive;
+
+  // Wedge hull — 8 vertices matching the exact visual surface
+  // Back (x=-hl): raised by rearLift. Front (x=+hl): on the ground.
+  const v = [
+    new CANNON.Vec3(-hl, rearLift,       -hw),  // 0: back-left-bottom
+    new CANNON.Vec3(-hl, rearLift,        hw),  // 1: back-right-bottom
+    new CANNON.Vec3(-hl, rearLift + hb,  -hw),  // 2: back-left-top
+    new CANNON.Vec3(-hl, rearLift + hb,   hw),  // 3: back-right-top
+    new CANNON.Vec3( hl, 0,              -hw),  // 4: front-left-bottom
+    new CANNON.Vec3( hl, 0,               hw),  // 5: front-right-bottom
+    new CANNON.Vec3( hl, hf,             -hw),  // 6: front-left-top
+    new CANNON.Vec3( hl, hf,              hw),  // 7: front-right-top
+  ];
+
+  // Faces — vertex indices, CCW winding when viewed from outside
+  const faces = [
+    [0, 4, 5, 1],  // bottom (angled ramp underneath)
+    [2, 3, 7, 6],  // top ramp (angled from back-top to front-tip)
+    [0, 1, 3, 2],  // back face
+    [4, 6, 7, 5],  // front face
+    [0, 2, 6, 4],  // left side
+    [1, 5, 7, 3],  // right side
+  ];
+
+  const wedgeShape = new CANNON.ConvexPolyhedron(v, faces);
+  body.addShape(wedgeShape);
+
+  // Wheel spheres — ride on the table, stick out the sides
+  body.addShape(new CANNON.Sphere(wheelRadius), new CANNON.Vec3(motorX, wheelRadius, -motorZoffset));
+  body.addShape(new CANNON.Sphere(wheelRadius), new CANNON.Vec3(motorX, wheelRadius,  motorZoffset));
+  body.position.set(spawnPos[0], spawnPos[1], spawnPos[2]);
+  if (spawnRotY) body.quaternion.setFromEuler(0, spawnRotY, 0);
+
+  world.addBody(body);
+  scene.add(group);
+
+  const def = { name: 'GCB WEDGE', mass: BOT_MASS, maxSpeed: 3, turnSpeed: 5, health: 100, color: color };
+
+  const botMeshes = weaponType === 'spinner'
+    ? [spinnerSurf.bodyMesh]
+    : [surf.bodyMesh, surf.flipMesh];
+
+  const bot = {
+    body, meshGroup: group, meshes: botMeshes, def,
+    health: 100, maxHealth: 100,
+    flipTimer: 0,
+    flashTimer: 0, originalColors: botMeshes.map(() => color),
+    wheels: wheelMeshes,
+    motorSpeedL: 0, motorSpeedR: 0,
+    wheelAngleL: 0, wheelAngleR: 0,
+    weaponType: weaponType || 'flipper',
+  };
+
+  if (weaponType === 'spinner') {
+    bot.discGroup = spinnerSurf.discGroup;
+    bot.spinnerRPM = 0;
+    bot.spinnerAngle = 0;
+    bot.spinnerSpinning = true;
+    bot.discCenterY = spinnerSurf.rampTopAtDisc; // local Y of disc center (ramp surface level)
+  } else {
+    bot.flipperPivot = surf.flipperPivot;
+    bot.flipperAngle = 0;
+    bot.flipperState = 'ready';
+    bot.flipperCooldown = 0;
+    bot.flipperCharges = FLIPPER_CHARGES;
+  }
+
+  return bot;
+}
+
+// ─── CONTROLS ───
+const keys = {};
+window.addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (e.code === 'Space') e.preventDefault();
+});
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+
+
+// ─── REAL PHYSICS: BEETLEWEIGHT COMBAT ROBOT ───
+// Sources: robotcombatwiki.com, bristolbotbuilders, combatics.co.uk
+//
+// Beetleweight class: 3 lb (1.36 kg)
+// Drive: 2x N20 brushed DC gearmotors (6V, 600 RPM through gearbox)
+//   - Stall torque: ~2 kg·cm = 0.196 Nm per motor
+//   - No-load speed: 600 RPM = 62.8 rad/s
+//   - Torque curve: linear from stall torque at 0 RPM to 0 at free speed
+// Wheels: ~30mm radius rubber on plastic hub
+//
+// In our game, wheel radius is 0.22m (game scale ≈ 7:1 vs real).
+// Scale motor torque to preserve real acceleration ratio:
+//   Real: 0.196 Nm / 0.03m radius = 6.5N per wheel → 13N / 1.36kg = 9.6 m/s²
+//   Game: torque / 0.22m = force → need ~10 m/s² accel at 1.36 kg → 13.6N → torque = 1.5 Nm
+//
+const BOT_MASS = 1.36;              // kg — beetleweight (3 lb)
+const MOTOR_STALL_TORQUE = 1.5;     // Nm — scaled to preserve real accel ratio
+const MOTOR_FREE_SPEED = 62.8;      // rad/s — 600 RPM (real N20 gearmotor)
+const GRAVITY = 9.82;               // m/s²
+
+// Friction coefficients (real rubber on wood)
+const MU_STATIC_RUBBER_WOOD  = 0.7;  // rubber tire on wood table — static
+const MU_KINETIC_RUBBER_WOOD = 0.5;  // rubber tire on wood table — sliding
+const MU_METAL_WOOD = 0.2;           // metal wedge scraping on wood
+
+// Weight distribution: motors+wheels at 90% back → ~70% of weight on rear axle
+const REAR_WEIGHT_FRACTION = 0.70;
+
+// Wheel track (center-to-center distance between wheels)
+const WHEEL_TRACK = 1.2; // game units
+
+function applyControls(bot, fwd, back, left, right, boost) {
+  const body = bot.body;
+  if (body.sleepState !== 0) body.wakeUp();
+
+  // Input → throttle per motor
+  let throttleL = 0, throttleR = 0;
+  if (keys[fwd])  { throttleL += 1; throttleR += 1; }
+  if (keys[back]) { throttleL -= 1; throttleR -= 1; }
+  if (keys[left])  { throttleL -= 0.9; throttleR += 0.9; }
+  if (keys[right]) { throttleL += 0.9; throttleR -= 0.9; }
+  if (keys[boost]) { throttleL *= 1.5; throttleR *= 1.5; }
+  throttleL = Math.max(-1.5, Math.min(1.5, throttleL));
+  throttleR = Math.max(-1.5, Math.min(1.5, throttleR));
+
+  // Store for wheel spin animation
+  bot.motorSpeedL = throttleL;
+  bot.motorSpeedR = throttleR;
+
+  // Forward direction (+X local = thin wedge tip)
+  const fwd3 = new CANNON.Vec3(1, 0, 0);
+  body.quaternion.vmult(fwd3, fwd3);
+  fwd3.y = 0;
+  const fLen = Math.sqrt(fwd3.x * fwd3.x + fwd3.z * fwd3.z);
+  if (fLen > 0.001) { fwd3.x /= fLen; fwd3.z /= fLen; }
+
+  // ── Real physics chain: Motor → Torque → Wheel force → Traction ──
+  // All math is correct, but cannon.js compound body solver eats applied forces.
+  // Solution: compute forces with real physics, then apply as direct velocity change.
+  // F=ma → a=F/m → Δv = a*dt
+  const wheelR = 0.22;
+  const dt = FIXED_DT;
+  const curSpeed = body.velocity.x * fwd3.x + body.velocity.z * fwd3.z;
+  const wheelOmega = curSpeed / wheelR;
+
+  // DC motor torque curve: torque = stallTorque * (1 - ω/ωfree) * throttle
+  function mTorque(thr, omega) {
+    const d = Math.sign(thr), a = Math.abs(thr);
+    const ratio = Math.max(0, d * omega / MOTOR_FREE_SPEED);
+    return MOTOR_STALL_TORQUE * a * Math.max(0, 1 - ratio) * d;
+  }
+
+  let fL = mTorque(throttleL, wheelOmega) / wheelR;
+  let fR = mTorque(throttleR, wheelOmega) / wheelR;
+
+  // Traction limit: max force before wheels slip
+  const weightPerWheel = body.mass * GRAVITY * REAR_WEIGHT_FRACTION * 0.5;
+  const tractMax = MU_STATIC_RUBBER_WOOD * weightPerWheel;
+  if (Math.abs(fL) > tractMax) fL = Math.sign(fL) * MU_KINETIC_RUBBER_WOOD * weightPerWheel;
+  if (Math.abs(fR) > tractMax) fR = Math.sign(fR) * MU_KINETIC_RUBBER_WOOD * weightPerWheel;
+
+  // Net force → acceleration
+  const netF = fL + fR;
+  const accel = netF / body.mass; // m/s²
+
+  // Track bot's own speed (cannon.js velocity gets messed with by solver)
+  if (!bot._driveSpeed) bot._driveSpeed = 0;
+  bot._driveSpeed += accel * dt;
+
+  // Natural deceleration (rolling resistance)
+  if (throttleL === 0 && throttleR === 0) {
+    bot._driveSpeed *= 0.95;
+    body.angularVelocity.y *= (1 - 0.05);
+  }
+
+  // Speed cap (motor free speed → max ground speed)
+  const maxGroundSpeed = MOTOR_FREE_SPEED * wheelR; // ~13.8 m/s
+  if (Math.abs(bot._driveSpeed) > maxGroundSpeed) {
+    bot._driveSpeed = Math.sign(bot._driveSpeed) * maxGroundSpeed;
+  }
+
+  // Apply as direct position change — cannon.js solver can't undo this
+  body.position.x += fwd3.x * bot._driveSpeed * dt;
+  body.position.z += fwd3.z * bot._driveSpeed * dt;
+
+  // Differential → yaw (this already works via angularVelocity)
+  const yawTorque = (fR - fL) * WHEEL_TRACK * 0.5;
+  const inertia = 0.04; // I ≈ (1/12)*m*(L²+W²) for beetleweight
+  body.angularVelocity.y += (yawTorque / inertia) * dt;
+}
+
+// ─── FLIPPER SYSTEM ───
+function fireFlipper(bot) {
+  if (bot.flipperState !== 'ready' || bot.flipperCharges <= 0) return;
+  bot.flipperState = 'firing';
+  bot.flipperCharges--;
+}
+
+function updateFlipper(bot, otherBot, dt) {
+  if (!bot.flipperPivot) return;
+
+  // Animate flipper arm
+  if (bot.flipperState === 'firing') {
+    bot.flipperAngle += FLIPPER_FIRE_SPEED * dt;
+    if (bot.flipperAngle >= FLIPPER_MAX_ANGLE) {
+      bot.flipperAngle = FLIPPER_MAX_ANGLE;
+      bot.flipperState = 'retracting';
+
+      // ── IMPACT: apply upward impulse to opponent if they're in front ──
+      if (otherBot) {
+        // Get bot's forward direction in world space
+        const fwd = new CANNON.Vec3(1, 0, 0);
+        bot.body.quaternion.vmult(fwd, fwd);
+
+        // Vector from bot to opponent
+        const toOther = new CANNON.Vec3(
+          otherBot.body.position.x - bot.body.position.x,
+          0,
+          otherBot.body.position.z - bot.body.position.z
+        );
+        const dist = Math.sqrt(toOther.x * toOther.x + toOther.z * toOther.z);
+
+        // Check if opponent is in front and close enough
+        if (dist < WEDGE_LEN * 1.2) {
+          const dot = fwd.x * toOther.x + fwd.z * toOther.z;
+          if (dot > 0) { // opponent is in front
+            const proximity = 1 - (dist / (WEDGE_LEN * 1.2)); // 1=touching, 0=far
+            // Pneumatic launch! Massive upward + forward impulse
+            const launchUp = FLIPPER_FORCE * proximity;
+            const launchFwd = FLIPPER_FORCE * 0.4 * proximity;
+            otherBot.body.velocity.y += launchUp;
+            otherBot.body.velocity.x += fwd.x * launchFwd;
+            otherBot.body.velocity.z += fwd.z * launchFwd;
+            // Tumble spin
+            otherBot.body.angularVelocity.x += (Math.random() - 0.5) * 10;
+            otherBot.body.angularVelocity.z += (Math.random() - 0.5) * 10;
+
+            // Recoil on the flipper bot (Newton's 3rd law)
+            bot.body.velocity.y += launchUp * 0.15;
+            if (bot._driveSpeed) bot._driveSpeed *= 0.5;
+          }
+        }
+      }
+    }
+  } else if (bot.flipperState === 'retracting') {
+    bot.flipperAngle -= FLIPPER_RETRACT_SPEED * dt;
+    if (bot.flipperAngle <= 0) {
+      bot.flipperAngle = 0;
+      bot.flipperState = 'cooldown';
+      bot.flipperCooldown = FLIPPER_COOLDOWN;
+    }
+  } else if (bot.flipperState === 'cooldown') {
+    bot.flipperCooldown -= dt;
+    if (bot.flipperCooldown <= 0) {
+      bot.flipperState = 'ready';
+    }
+  }
+
+  // Apply rotation to flipper pivot (rotates around local Z axis = hinge line)
+  bot.flipperPivot.rotation.z = bot.flipperAngle;
+}
+
+// ─── SPINNER WEAPON SYSTEM ───
+function updateSpinner(bot, otherBot, dt) {
+  if (!bot.discGroup || bot.weaponType !== 'spinner') return;
+
+  // Spin up toward max RPM (motor accelerates the disc)
+  if (bot.spinnerSpinning && bot.spinnerRPM < SPINNER_MAX_RPM) {
+    bot.spinnerRPM = Math.min(SPINNER_MAX_RPM, bot.spinnerRPM + SPINNER_SPINUP * dt);
+  }
+
+  // Visual rotation
+  bot.spinnerAngle += bot.spinnerRPM * dt;
+  bot.discGroup.rotation.z = bot.spinnerAngle;
+
+  // ── Check for disc contact with opponent ──
+  // The disc only hits from the TOP — bottom half is enclosed in the chassis.
+  // Opponent must ride up the wedge ramp to reach the exposed disc.
+  if (!otherBot || bot.spinnerRPM < 20) return;
+
+  // Disc world position (offset along bot's forward direction)
+  const fwd = new CANNON.Vec3(1, 0, 0);
+  bot.body.quaternion.vmult(fwd, fwd);
+  const discWX = bot.body.position.x + fwd.x * WEDGE_LEN * 0.25;
+  const discWY = bot.body.position.y + bot.discCenterY; // disc center world Y
+  const discWZ = bot.body.position.z + fwd.z * WEDGE_LEN * 0.25;
+
+  // Distance to opponent (3D)
+  const dx = otherBot.body.position.x - discWX;
+  const dy = otherBot.body.position.y - discWY;
+  const dz = otherBot.body.position.z - discWZ;
+  const distXZ = Math.sqrt(dx * dx + dz * dz);
+
+  // Hit if: opponent is in front and within disc reach, with cooldown to prevent spam
+  const hitRange = SPINNER_DISC_R + 0.3;
+  const toOtherDot = dx * fwd.x + dz * fwd.z;
+  if (!bot._spinHitCooldown) bot._spinHitCooldown = 0;
+  bot._spinHitCooldown = Math.max(0, bot._spinHitCooldown - dt);
+
+  if (distXZ < hitRange && toOtherDot > -0.1 && bot._spinHitCooldown <= 0) {
+    bot._spinHitCooldown = 0.5; // half second between hits
+
+    // Kinetic energy: KE = 0.5 * I * ω², I = 0.5 * m * r²
+    const I = 0.5 * SPINNER_DISC_MASS * SPINNER_DISC_R * SPINNER_DISC_R;
+    const KE = 0.5 * I * bot.spinnerRPM * bot.spinnerRPM;
+    const energyFraction = Math.min(1, KE / 50);
+
+    const hitForce = SPINNER_HIT_ENERGY * energyFraction;
+    const nx = dx / (distXZ + 0.01), nz = dz / (distXZ + 0.01);
+
+    // Launch opponent
+    otherBot.body.velocity.x += nx * hitForce * 0.7;
+    otherBot.body.velocity.z += nz * hitForce * 0.7;
+    otherBot.body.velocity.y += hitForce * 0.5;
+    otherBot.body.angularVelocity.x += (Math.random() - 0.5) * hitForce;
+    otherBot.body.angularVelocity.z += (Math.random() - 0.5) * hitForce;
+
+    // Damage
+    otherBot.health -= hitForce * 0.5;
+    otherBot.flashTimer = 0.2;
+
+    // Disc loses energy (slows 70%)
+    bot.spinnerRPM *= 0.3;
+
+    // Recoil (Newton's 3rd)
+    bot.body.velocity.x -= nx * hitForce * 0.2;
+    bot.body.velocity.z -= nz * hitForce * 0.2;
+
+    // Effects
+    shakeTimer = Math.max(shakeTimer, 0.15 + energyFraction * 0.2);
+    spawnDebris(otherBot.body.position, hitForce * 0.5);
+  }
+}
+
+// ─── GAME STATE ───
+let gameState = 'start'; // start | playing | roundOver
+let bot1, bot2;
+let shakeTimer = 0;
+let shakeOffset = { x: 0, y: 0, z: 0 };
+const baseCamPos = { x: 0, y: 10, z: 12 };
+let controlsHintTimer = 0;
+const debris = [];
+
+function resetGame() {
+  // Remove old bots
+  if (bot1) { world.removeBody(bot1.body); scene.remove(bot1.meshGroup); }
+  if (bot2) { world.removeBody(bot2.body); scene.remove(bot2.meshGroup); }
+
+  // Remove debris
+  for (const d of debris) {
+    world.removeBody(d.body);
+    scene.remove(d.mesh);
+  }
+  debris.length = 0;
+
+  // Spawn GCB wedge bots on opposite ends of table
+  // Drop bots onto table — visible drop to show physics
+  bot1 = createGCBBot(0xff1744, [-2.5, TABLE_H / 2 + 0.4, 0], 0, 'flipper');
+  bot2 = createGCBBot(0x00e5ff, [2.5, TABLE_H / 2 + 0.4, 0], Math.PI, 'spinner');
+  setupCollisionListener(bot1);
+  setupCollisionListener(bot2);
+  pendingCollisions.length = 0;
+
+  gameState = 'playing';
+  controlsHintTimer = 0;
+
+  document.getElementById('overlay').classList.add('hidden');
+}
+
+// ─── COLLISION & DAMAGE ───
+let pendingCollisions = [];
+
+function setupCollisionListener(bot) {
+  bot.body.addEventListener('collide', function(e) {
+    if (!bot1 || !bot2) return;
+    const other = e.body;
+    if (other !== bot1.body && other !== bot2.body) return;
+
+    const contact = e.contact;
+    const impulse = Math.abs(contact.getImpactVelocityAlongNormal());
+    if (impulse > DMG_THRESH) {
+      pendingCollisions.push({ impulse, pos: bot.body.position.clone() });
+    }
+  });
+}
+
+function handleCollisions() {
+  if (!bot1 || !bot2 || pendingCollisions.length === 0) return;
+
+  // Process the strongest collision this frame (avoid double-counting)
+  let maxImpulse = 0;
+  let hitPos = null;
+  for (const c of pendingCollisions) {
+    if (c.impulse > maxImpulse) {
+      maxImpulse = c.impulse;
+      hitPos = c.pos;
+    }
+  }
+  pendingCollisions.length = 0;
+
+  const dmg = (maxImpulse - DMG_THRESH) * DMG_MULT;
+  const velA = bot1.body.velocity;
+  const velB = bot2.body.velocity;
+  const momA = bot1.body.mass * Math.sqrt(velA.x * velA.x + velA.y * velA.y + velA.z * velA.z);
+  const momB = bot2.body.mass * Math.sqrt(velB.x * velB.x + velB.y * velB.y + velB.z * velB.z);
+  const total = momA + momB + 0.01;
+  const ratA = 1 - (momA / total);
+  const ratB = 1 - (momB / total);
+
+  bot1.health = Math.max(0, bot1.health - dmg * ratA);
+  bot2.health = Math.max(0, bot2.health - dmg * ratB);
+
+  bot1.flashTimer = Math.max(bot1.flashTimer, ratA * 0.15);
+  bot2.flashTimer = Math.max(bot2.flashTimer, ratB * 0.15);
+
+  shakeTimer = Math.max(shakeTimer, 0.1 + maxImpulse * 0.02);
+
+  if (maxImpulse > DMG_THRESH * 2 && hitPos) {
+    spawnDebris(hitPos, maxImpulse);
+  }
+}
+
+function spawnDebris(pos, force) {
+  const count = Math.min(Math.floor(force * 0.5), 5);
+  for (let i = 0; i < count; i++) {
+    const size = 0.03 + Math.random() * 0.05;
+    const geo = new THREE.BoxGeometry(size, size, size);
+    const mat = new THREE.MeshStandardMaterial({
+      color: [0xcccccc, 0x999999, 0xe53935, 0x1e88e5, 0xff9800][Math.floor(Math.random() * 5)],
+      roughness: 0.5, metalness: 0.5,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.castShadow = true;
+    scene.add(mesh);
+
+    const body = new CANNON.Body({ mass: 0.01, material: matMetal });
+    body.addShape(new CANNON.Box(new CANNON.Vec3(size / 2, size / 2, size / 2)));
+    body.position.set(
+      pos.x + (Math.random() - 0.5) * 0.5,
+      pos.y + 0.3,
+      pos.z + (Math.random() - 0.5) * 0.5
+    );
+    body.velocity.set(
+      (Math.random() - 0.5) * 3,
+      2 + Math.random() * 3,
+      (Math.random() - 0.5) * 3
+    );
+    world.addBody(body);
+
+    debris.push({ mesh, body, life: 2.0 });
+  }
+}
+
+// ─── WIN CONDITIONS ───
+function checkWinConditions(dt) {
+  if (gameState !== 'playing') return;
+
+  // Fall off table
+  for (const [bot, other, pName] of [[bot1, bot2, 'BLU SPINNER'], [bot2, bot1, 'RED FLIPPER']]) {
+    if (bot.body.position.y < -2) {
+      declareWinner(pName, 'RING OUT!');
+      return;
+    }
+  }
+
+  // Flip check
+  for (const [bot, pName, flipEl] of [[bot1, 'BLU SPINNER', 'flip1'], [bot2, 'RED FLIPPER', 'flip2']]) {
+    const up = new CANNON.Vec3(0, 1, 0);
+    bot.body.quaternion.vmult(up, up);
+    if (up.y < 0.15) {
+      bot.flipTimer += dt;
+      const remaining = Math.max(0, FLIP_KO_TIME - bot.flipTimer).toFixed(1);
+      document.getElementById(flipEl).textContent = 'FLIPPED! ' + remaining + 's';
+      if (bot.flipTimer >= FLIP_KO_TIME) {
+        declareWinner(pName, 'FLIP KO!');
+        return;
+      }
+    } else {
+      bot.flipTimer = Math.max(0, bot.flipTimer - dt * 2);
+      document.getElementById(flipEl).textContent = '';
+    }
+  }
+
+  // Health
+  if (bot1.health <= 0) { declareWinner('BLU SPINNER', 'DESTRUCTION!'); return; }
+  if (bot2.health <= 0) { declareWinner('RED FLIPPER', 'DESTRUCTION!'); return; }
+}
+
+function declareWinner(name, reason) {
+  gameState = 'roundOver';
+  const ov = document.getElementById('overlay');
+  ov.classList.remove('hidden');
+  document.getElementById('overlay-title').textContent = name + ' WINS!';
+  document.getElementById('overlay-sub').textContent = reason;
+  document.getElementById('overlay-prompt').textContent = 'PRESS SPACE FOR REMATCH';
+}
+
+// ─── HUD ───
+function updateHUD() {
+  if (!bot1 || !bot2) return;
+
+  for (const [bot, elId] of [[bot1, 'hp1'], [bot2, 'hp2']]) {
+    const pct = Math.max(0, bot.health / bot.maxHealth * 100);
+    const bar = document.getElementById(elId);
+    bar.style.width = pct + '%';
+    if (pct > 50) bar.style.background = 'var(--health-good)';
+    else if (pct > 25) bar.style.background = 'var(--health-mid)';
+    else bar.style.background = 'var(--health-low)';
+  }
+}
+
+// ─── VISUAL EFFECTS ───
+function updateVisuals(dt) {
+  // Spin wheels based on motor speeds
+  for (const bot of [bot1, bot2]) {
+    if (!bot || !bot.wheels || bot.wheels.length < 2) continue;
+    const spinRate = 12; // radians per second at full power
+    bot.wheelAngleL += bot.motorSpeedL * spinRate * dt;
+    bot.wheelAngleR += bot.motorSpeedR * spinRate * dt;
+    // Left wheel (index 0): rotates around local Z axis (which is the axle direction)
+    // The wheel group's Z is along the axle, so spinning = rotating around Z
+    // But visually the tire cylinder was rotated to align along Z, so spin = rotation.z
+    bot.wheels[0].rotation.z = bot.wheelAngleL;
+    bot.wheels[1].rotation.z = bot.wheelAngleR;
+    // Dampen motor speeds when no input (visual coast-down)
+    bot.motorSpeedL *= 0.92;
+    bot.motorSpeedR *= 0.92;
+  }
+
+  // Flash on damage
+  for (const bot of [bot1, bot2]) {
+    if (!bot) continue;
+    if (bot.flashTimer > 0) {
+      bot.flashTimer -= dt;
+      for (const m of bot.meshes) {
+        m.material.emissive.setHex(0xffffff);
+        m.material.emissiveIntensity = bot.flashTimer * 5;
+      }
+    } else {
+      for (const m of bot.meshes) {
+        m.material.emissiveIntensity = 0;
+      }
+    }
+  }
+
+  // Screen shake
+  if (shakeTimer > 0) {
+    shakeTimer -= dt;
+    const mag = shakeTimer * 2;
+    shakeOffset.x = (Math.random() - 0.5) * mag;
+    shakeOffset.y = (Math.random() - 0.5) * mag;
+    shakeOffset.z = (Math.random() - 0.5) * mag;
+  } else {
+    shakeOffset.x = shakeOffset.y = shakeOffset.z = 0;
+  }
+  camera.position.set(
+    baseCamPos.x + shakeOffset.x,
+    baseCamPos.y + shakeOffset.y,
+    baseCamPos.z + shakeOffset.z
+  );
+
+  // Debris lifetime
+  for (let i = debris.length - 1; i >= 0; i--) {
+    const d = debris[i];
+    d.life -= dt;
+    d.mesh.position.copy(d.body.position);
+    d.mesh.quaternion.copy(d.body.quaternion);
+    if (d.life <= 0) {
+      world.removeBody(d.body);
+      scene.remove(d.mesh);
+      debris.splice(i, 1);
+    }
+  }
+
+  // Controls hint fade
+  controlsHintTimer += dt;
+  if (controlsHintTimer > 5) {
+    document.getElementById('controls-hint').style.opacity = Math.max(0, 1 - (controlsHintTimer - 5) / 2);
+  }
+}
+
+// ─── SYNC ───
+function syncBot(bot) {
+  if (!bot) return;
+  bot.meshGroup.position.copy(bot.body.position);
+  bot.meshGroup.quaternion.copy(bot.body.quaternion);
+}
+
+// ─── RESIZE ───
+function onResize() {
+  const w = wrap.clientWidth, h = wrap.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+}
+window.addEventListener('resize', onResize);
+
+// ─── INIT ───
+buildTable();
+onResize();
+
+// ─── GAME LOOP ───
+let lastTime = performance.now();
+
+function gameLoop() {
+  requestAnimationFrame(gameLoop);
+
+  const now = performance.now();
+  const dt = Math.min((now - lastTime) / 1000, 0.1);
+  lastTime = now;
+
+  // Space to start/restart
+  if (keys['Space'] && gameState !== 'playing') {
+    keys['Space'] = false;
+    resetGame();
+  }
+
+  if (gameState === 'playing') {
+    applyControls(bot1, 'KeyW', 'KeyS', 'KeyA', 'KeyD', 'ShiftLeft');
+    applyControls(bot2, 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftRight');
+
+    // Weapon activation: Q for P1, Period for P2
+    if (keys['KeyQ']) { keys['KeyQ'] = false; if (bot1.weaponType === 'flipper') fireFlipper(bot1); }
+    if (keys['Period']) { keys['Period'] = false; if (bot2.weaponType === 'flipper') fireFlipper(bot2); }
+
+    // Update weapons
+    if (bot1.weaponType === 'flipper') updateFlipper(bot1, bot2, dt);
+    if (bot2.weaponType === 'flipper') updateFlipper(bot2, bot1, dt);
+    updateSpinner(bot1, bot2, dt);
+    updateSpinner(bot2, bot1, dt);
+
+    world.step(FIXED_DT, dt, MAX_SUB);
+
+    syncBot(bot1);
+    syncBot(bot2);
+
+    handleCollisions();
+    checkWinConditions(dt);
+    updateHUD();
+  }
+
+  updateVisuals(dt);
+  renderer.render(scene, camera);
+}
+
+gameLoop();
+</script>
+</body>
+</html>
