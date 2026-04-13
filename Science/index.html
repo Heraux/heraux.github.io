@@ -147,7 +147,7 @@
     position: relative;
     z-index: 1;
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 2px;
     padding: 0 60px;
   }
@@ -227,6 +227,7 @@
   .hub-card { animation: fadeUp 0.5s ease both; }
   .hub-card:nth-child(1) { animation-delay: 0.05s; }
   .hub-card:nth-child(2) { animation-delay: 0.10s; }
+  .hub-card:nth-child(3) { animation-delay: 0.15s; }
 
   @keyframes fadeUp {
     from { opacity: 0; transform: translateY(16px); }
@@ -304,6 +305,14 @@
     <div class="hub-icon">◬</div>
     <div class="hub-name">Tools</div>
     <div class="hub-desc">Interactive geometry tools — GCM shape forges, vibration explorers, chain builders, and harmonic visualizers built from scratch in the browser.</div>
+    <div class="hub-arrow">↓</div>
+  </a>
+
+  <a class="hub-card" href="Chemistry/index.html">
+    <div class="hub-glow"></div>
+    <div class="hub-icon">⬡</div>
+    <div class="hub-name">Chemistry</div>
+    <div class="hub-desc">Molecular structure visualized through the corridor framework — geometry meets chemistry at the atomic scale.</div>
     <div class="hub-arrow">↓</div>
   </a>
 

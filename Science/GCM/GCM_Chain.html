@@ -1,0 +1,1404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GCM · Chain Builder</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#04040e;overflow:hidden;font-family:'Courier New',monospace;}
+
+  #title{position:fixed;top:12px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;z-index:10;}
+  #title h1{font-size:11px;color:#f0c040;letter-spacing:6px;}
+  #title p{font-size:7.5px;color:#0d1824;letter-spacing:2px;margin-top:3px;}
+
+  /* Left — active level list */
+  #left{position:fixed;left:12px;top:50%;transform:translateY(-50%);z-index:10;pointer-events:none;}
+  .lr{font-size:7.5px;letter-spacing:1px;line-height:2.1;white-space:nowrap;}
+
+  /* Right — V controls */
+  #right{
+    position:fixed;right:12px;top:50%;transform:translateY(-50%);
+    z-index:10;display:flex;flex-direction:column;gap:3px;max-height:90vh;overflow-y:auto;
+  }
+  .rt{font-size:6.5px;letter-spacing:2px;color:#0a1a2a;margin-bottom:4px;text-align:right;}
+  .vr{display:flex;align-items:center;gap:3px;justify-content:flex-end;}
+  .vn{font-size:6.5px;letter-spacing:.5px;text-align:right;min-width:90px;opacity:.65;}
+  .vb{
+    width:15px;height:15px;border:1px solid #0d1e2a;background:rgba(4,4,14,.9);
+    color:#0d2030;cursor:pointer;font-size:9px;display:flex;align-items:center;
+    justify-content:center;transition:all .15s;flex-shrink:0;
+  }
+  .vb:hover{border-color:currentColor;}
+  .vv{font-size:8px;min-width:30px;text-align:center;color:#f0c040;letter-spacing:1px;}
+  .vreset{font-size:7px;cursor:pointer;opacity:.3;flex-shrink:0;transition:opacity .15s;padding:0 2px;}
+  .vreset:hover{opacity:.9;}
+
+  /* Bottom */
+  #bot{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:14px;z-index:10;}
+  .cl{font-size:8px;letter-spacing:2px;color:#1a3040;}
+  .sb{width:22px;height:22px;border:1px solid #1a2a38;background:rgba(4,4,14,.9);color:#1a3040;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+  .sb:hover{border-color:#f0c040;color:#f0c040;}
+  #dval{font-size:12px;letter-spacing:1px;color:#a8d8ea;min-width:16px;text-align:center;}
+  #wsl{-webkit-appearance:none;width:80px;height:2px;background:linear-gradient(to right,#a8d8ea var(--wpct,50%),#0a1828 var(--wpct,50%));outline:none;cursor:pointer;}
+  #wsl::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:#a8d8ea;}
+  #wvl{font-size:8px;color:#1a3040;width:28px;}
+  #ssl{-webkit-appearance:none;width:110px;height:2px;background:linear-gradient(to right,#a8d8ea var(--spct,50%),#0a1828 var(--spct,50%));outline:none;cursor:pointer;}
+  #ssl::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:#a8d8ea;}
+  .vcam{
+    width:15px;height:15px;border:1px solid #0d1e2a;background:rgba(4,4,14,.9);
+    color:#0d2030;cursor:pointer;font-size:8px;display:flex;align-items:center;
+    justify-content:center;transition:all .15s;flex-shrink:0;
+  }
+  .vcam:hover{border-color:#a8d8ea;color:#a8d8ea;}
+  .vcam.active{border-color:#a8d8ea88;color:#a8d8ea;background:rgba(20,50,80,.4);}
+  #camreset{
+    position:fixed;bottom:56px;right:12px;z-index:10;
+    font-size:7px;letter-spacing:1.5px;color:#0a1a2a;cursor:pointer;
+    border:1px solid #0a1a2a;padding:3px 6px;background:rgba(4,4,14,.9);
+    transition:all .15s;
+  }
+  #camreset:hover{color:#a8d8ea;border-color:#a8d8ea;}
+  .locked .vv{color:#00ff88!important;text-shadow:0 0 8px rgba(0,255,136,.7);}
+  .locked .vb{border-color:#00ff8844!important;}
+  /* P vertex counter */
+  #pcount{position:fixed;bottom:58px;left:50%;transform:translateX(-50%);font-size:8px;letter-spacing:3px;color:#f0c04066;pointer-events:none;z-index:10;text-align:center;}
+  #fsl{-webkit-appearance:none;width:100px;height:2px;background:linear-gradient(to right,#f0c040 var(--pct,20%),#0a1828 var(--pct,20%));outline:none;cursor:pointer;}
+  #fsl::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:#f0c040;}
+  #fvl{font-size:8px;color:#1a3040;width:24px;}
+
+  .sb.locked{border-color:#300!important;color:#300!important;cursor:not-allowed;}
+  .sb.locked:hover{border-color:#500!important;color:#500!important;}position:fixed;bottom:0;left:0;right:0;height:24px;background:rgba(4,4,14,.97);border-top:1px solid #080814;display:flex;align-items:center;justify-content:center;font-size:7px;letter-spacing:1.5px;color:#0a1524;z-index:10;white-space:nowrap;overflow:hidden;}
+
+  #lbls{position:fixed;top:0;left:0;pointer-events:none;z-index:5;}
+  .lbl{position:absolute;font-size:8px;letter-spacing:1px;text-shadow:0 0 6px currentColor;white-space:nowrap;}
+
+  /* ── Chain Analysis Panel ── */
+  #ap{
+    position:fixed;right:130px;top:50%;transform:translateY(-50%);
+    z-index:10;display:flex;flex-direction:column;gap:3px;min-width:160px;
+  }
+  .ap-head{font-size:6px;letter-spacing:3.5px;color:#1a3040;
+    border-bottom:1px solid #0a1824;padding-bottom:3px;margin-bottom:1px;}
+  .ap-row{display:flex;justify-content:space-between;align-items:baseline;
+    gap:10px;font-size:6px;letter-spacing:.8px;line-height:1.9;}
+  .ap-lbl{color:#0a1824;letter-spacing:1.2px;white-space:nowrap;flex-shrink:0;}
+  .ap-val{font-size:6.5px;letter-spacing:1.2px;color:#1a3040;
+    text-align:right;transition:color .35s;white-space:nowrap;}
+  .ap-val.hi{color:#a8d8ea;}
+  .ap-val.go{color:#7ec8a0;}
+  .ap-val.gd{color:#f0c040;}
+  .ap-val.warn{color:#ff6633;}
+  .ap-div{height:1px;background:linear-gradient(90deg,#04040e,#0a1520,#04040e);margin:2px 0;}
+  /* Explore log */
+  #elog{
+    font-size:5.5px;letter-spacing:.6px;color:#0a1824;line-height:1.85;
+    max-height:100px;overflow-y:auto;border-top:1px solid #0a1520;
+    padding-top:3px;margin-top:2px;
+  }
+  #elog::-webkit-scrollbar{width:2px;}
+  #elog::-webkit-scrollbar-thumb{background:#0a1a2a;}
+  .el-entry{color:#0a1e2c;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis;max-width:220px;}
+  .el-new{color:#f0c04055;}
+
+  /* ── Discovery flash ── */
+  #disc{
+    position:fixed;top:52px;left:50%;transform:translateX(-50%);
+    font-size:9px;letter-spacing:5px;color:#f0c040;
+    pointer-events:none;z-index:30;opacity:0;transition:opacity .4s;
+    white-space:nowrap;text-shadow:0 0 24px currentColor;
+  }
+  #disc.show{opacity:1;}
+
+  /* ── Explore strip ── */
+  #xstrip{
+    position:fixed;top:36px;left:50%;transform:translateX(-50%);
+    font-size:6px;letter-spacing:3px;color:#f0c04033;
+    pointer-events:none;z-index:10;opacity:0;transition:opacity .5s;
+    white-space:nowrap;
+  }
+  #xstrip.on{opacity:1;}
+
+  /* ── Persistent plane-jump strip (always on top, never rebuilt) ── */
+  #plane-strip{
+    position:fixed;right:14px;bottom:90px;z-index:20;
+    display:flex;flex-direction:column;gap:3px;align-items:flex-end;
+  }
+  .pjb{
+    font-size:6px;letter-spacing:1.5px;padding:3px 9px;
+    border:1px solid #0d1e2a;background:rgba(4,4,14,.94);
+    color:#1a3040;cursor:pointer;transition:all .18s;white-space:nowrap;
+    font-family:'Courier New',monospace;text-align:right;
+  }
+  .pjb:hover{border-color:#a8d8ea88;color:#a8d8ea;}
+  .pjb.pj-on{border-color:#f0c04055;color:#f0c04088;}
+  .pjb#pjb-P{border-color:#f0c04022;color:#f0c04044;}
+  .pjb#pjb-P:hover{border-color:#f0c040;color:#f0c040;}
+</style>
+</head>
+<body>
+
+<div id="title">
+  <h1>GCM · CHAIN BUILDER</h1>
+  <p>add depth · rotate B to set V · P emerges at center · build toward Gen10</p>
+</div>
+
+<div id="camreset">⊙ CENTER</div>
+
+<!-- ── Persistent plane-jump strip — works during explore, pause, always ── -->
+<div id="plane-strip">
+  <button class="pjb" id="pjb-P"  onclick="jumpTo('P')">⊙ P</button>
+  <button class="pjb" id="pjb-A7" onclick="jumpTo(7)">⊙ A.7</button>
+  <button class="pjb" id="pjb-A6" onclick="jumpTo(6)">⊙ A.6</button>
+  <button class="pjb" id="pjb-A5" onclick="jumpTo(5)">⊙ A.5</button>
+  <button class="pjb" id="pjb-A4" onclick="jumpTo(4)">⊙ A.4</button>
+  <button class="pjb" id="pjb-A3" onclick="jumpTo(3)">⊙ A.3</button>
+  <button class="pjb" id="pjb-A2" onclick="jumpTo(2)">⊙ A.2</button>
+  <button class="pjb" id="pjb-A1" onclick="jumpTo(1)">⊙ A.1</button>
+  <button class="pjb" id="pjb-A0" onclick="jumpTo(0)">⊙ A.0</button>
+</div>
+
+<!-- ── Chain Analysis Panel ── -->
+<div id="ap">
+  <div class="ap-head">CHAIN ANALYSIS</div>
+  <div class="ap-row"><span class="ap-lbl">DEPTH</span>      <span class="ap-val hi"  id="av-depth">—</span></div>
+  <div class="ap-row"><span class="ap-lbl">LEVEL</span>      <span class="ap-val"     id="av-level">—</span></div>
+  <div class="ap-div"></div>
+  <div class="ap-row"><span class="ap-lbl">P VERTS</span>    <span class="ap-val gd"  id="av-pv">—</span></div>
+  <div class="ap-row"><span class="ap-lbl">P SPAN</span>     <span class="ap-val"     id="av-span">—</span></div>
+  <div class="ap-row"><span class="ap-lbl">P SHELLS</span>   <span class="ap-val"     id="av-shells">—</span></div>
+  <div class="ap-row"><span class="ap-lbl">P DENSITY</span>  <span class="ap-val go"  id="av-density">—</span></div>
+  <div class="ap-div"></div>
+  <div class="ap-row"><span class="ap-lbl">SYMMETRY</span>   <span class="ap-val hi"  id="av-sym">—</span></div>
+  <div class="ap-row"><span class="ap-lbl">ROTATION</span>   <span class="ap-val"     id="av-rot">—</span></div>
+  <div class="ap-div"></div>
+  <div class="ap-row"><span class="ap-lbl">COLLAPSE</span>   <span class="ap-val"     id="av-collapse">—</span></div>
+  <div class="ap-row"><span class="ap-lbl">LINES</span>      <span class="ap-val"     id="av-lines">—</span></div>
+  <div class="ap-div"></div>
+  <div class="ap-head" style="margin-top:2px;">EXPLORE LOG</div>
+  <div id="elog"><span class="el-entry" style="color:#0a1520">— start explore —</span></div>
+</div>
+
+<!-- ── Discovery flash ── -->
+<div id="disc"></div>
+<!-- ── Explore strip ── -->
+<div id="xstrip">◈ EXPLORE ACTIVE</div>
+
+<div id="left"></div>
+<div id="right"><div class="rt">V · B ROTATION</div></div>
+<div id="lbls"></div>
+
+<div id="pcount"></div>
+
+<div id="bot">
+  <span class="cl">DEPTH</span>
+  <button class="sb" id="d-dn">−</button>
+  <div id="dval">1</div>
+  <button class="sb" id="d-up">+</button>
+  <span class="cl">SPREAD</span>
+  <input type="range" id="ssl" min="50" max="600" value="100">
+  <span id="svl">1×</span>
+  <span class="cl">FRAMING</span>
+  <input type="range" id="fsl" min="0" max="100" value="18">
+  <span id="fvl">18%</span>
+  <span class="cl">SPEED</span>
+  <button class="sb" id="spd-slow"  onclick="setSpeed(2400)" style="font-size:7px;width:28px;">S</button>
+  <button class="sb" id="spd-med"   onclick="setSpeed(1400)" style="font-size:7px;width:28px;border-color:#f0c040;color:#f0c040;">M</button>
+  <button class="sb" id="spd-fast"  onclick="setSpeed(600)"  style="font-size:7px;width:28px;">F</button>
+  <button class="sb" id="btn-explore" onclick="toggleExplore()" style="font-size:7px;letter-spacing:1.5px;width:auto;padding:0 10px;">◈ EXPLORE</button>
+  <button class="sb" id="btn-epause" onclick="toggleExplorePause()" style="font-size:7px;letter-spacing:1.5px;width:auto;padding:0 10px;display:none;">❙❙ PAUSE</button>
+  <button class="sb" id="btn-ereset" onclick="resetExplore()" style="font-size:7px;letter-spacing:1.5px;width:auto;padding:0 10px;display:none;">↺ RESET</button>
+</div>
+
+<div id="bar">A.0·1·POINT &nbsp;·&nbsp; A.1·3·TRI &nbsp;·&nbsp; A.2·4·TETRA &nbsp;·&nbsp; A.3·6·OCTA &nbsp;·&nbsp; A.4·8·16-CELL &nbsp;·&nbsp; A.5·12·ICOSA &nbsp;·&nbsp; A.6·24·24-CELL &nbsp;·&nbsp; A.7·120·600-CELL &nbsp;→&nbsp; P·GEN9·?</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const PI=Math.PI, PI2=PI*2, PHI=(1+Math.sqrt(5))/2;
+function v3(x,y,z){return new THREE.Vector3(x,y,z);}
+
+// ─── SHAPE BUILDERS (relative, centered y=0, radius r in XZ) ─────────────────
+
+function shpPoint()    {return{v:[v3(0,0,0)],e:[]};}
+
+function shpTri(r){
+  return{v:[0,1,2].map(i=>{const a=i/3*PI2+PI/2;return v3(Math.cos(a)*r,0,Math.sin(a)*r);}),
+         e:[[0,1],[1,2],[2,0]]};
+}
+
+function shpTetra(r){
+  const h=r*.816;
+  return{v:[v3(0,h*.75,0),v3(r,-h*.25,0),v3(-r*.5,-h*.25,r*.866),v3(-r*.5,-h*.25,-r*.866)],
+         e:[[0,1],[0,2],[0,3],[1,2],[2,3],[3,1]]};
+}
+
+function shpOcta(r){
+  return{
+    v:[v3(r,0,0),v3(-r,0,0),v3(0,0,r),v3(0,0,-r),v3(0,r,0),v3(0,-r,0)],
+    e:[[0,4],[1,4],[2,4],[3,4],[0,5],[1,5],[2,5],[3,5],[0,2],[2,1],[1,3],[3,0]]
+  };
+}
+
+function shp16Cell(r){
+  const h=r*.68,b=r*.96,a=PI/3;
+  return{
+    v:[v3(0,h,0),v3(b,-h*.34,0),v3(-b*.5,-h*.34,b*.866),v3(-b*.5,-h*.34,-b*.866),
+       v3(0,-h,0),v3(b*Math.cos(a),h*.34,b*Math.sin(a)),
+       v3(b*Math.cos(a+PI2/3),h*.34,b*Math.sin(a+PI2/3)),
+       v3(b*Math.cos(a+PI2*2/3),h*.34,b*Math.sin(a+PI2*2/3))],
+    e:[[0,1],[0,2],[0,3],[1,2],[2,3],[3,1],[4,5],[4,6],[4,7],[5,6],[6,7],[7,5]]
+  };
+}
+
+function shpIcosa(r){
+  const cr=Math.sqrt(1+PHI*PHI),sc=r/cr;
+  const raw=[[0,1,PHI],[0,-1,PHI],[0,1,-PHI],[0,-1,-PHI],
+             [1,PHI,0],[-1,PHI,0],[1,-PHI,0],[-1,-PHI,0],
+             [PHI,0,1],[-PHI,0,1],[PHI,0,-1],[-PHI,0,-1]];
+  const verts=raw.map(([x,y,z])=>v3(x*sc,y*sc,z*sc));
+  const tgt=(2*sc)**2,edges=[];
+  for(let i=0;i<12;i++)for(let j=i+1;j<12;j++){
+    if(Math.abs(verts[i].distanceToSquared(verts[j])-tgt)<tgt*.15)edges.push([i,j]);
+  }
+  return{v:verts,e:edges};
+}
+
+function shp24Cell(r){
+  const raw4=[],seen=new Set();
+  for(const s1 of[-1,1])for(const s2 of[-1,1]){
+    [[s1,s2,0,0],[s1,0,s2,0],[s1,0,0,s2],[0,s1,s2,0],[0,s1,0,s2],[0,0,s1,s2]].forEach(v=>{
+      const k=v.join(',');if(!seen.has(k)){seen.add(k);raw4.push(v);}
+    });
+  }
+  const rt=0.55,d4=2.6;
+  const proj=raw4.map(([x,y,z,w])=>{
+    const zr=z*Math.cos(rt)-w*Math.sin(rt),wr=z*Math.sin(rt)+w*Math.cos(rt),s=d4/(d4-wr);
+    return v3(x*s,y*s,zr*s);
+  });
+  const mx=Math.max(...proj.map(v=>v.length()));
+  const verts=proj.map(v=>{const sc=v.length()<.001?0:r/mx;return v3(v.x*sc,v.y*sc*.55,v.z*sc);});
+  const edges=[];
+  for(let i=0;i<24;i++)for(let j=i+1;j<24;j++){
+    let d2=0;for(let k=0;k<4;k++)d2+=(raw4[i][k]-raw4[j][k])**2;
+    if(Math.abs(d2-2)<.12)edges.push([i,j]);
+  }
+  return{v:verts,e:edges};
+}
+
+function shp600Cell(r){
+  const phi=PHI,v4=[];
+  for(let i=0;i<4;i++)for(const s of[-1,1]){const v=[0,0,0,0];v[i]=s;v4.push(v);}
+  for(const a of[-1,1])for(const b of[-1,1])for(const c of[-1,1])for(const d of[-1,1])
+    v4.push([a*.5,b*.5,c*.5,d*.5]);
+  const base=[0,1/(2*phi),.5,phi/2],allP=[];
+  (function gp(a,l){
+    if(l===a.length){allP.push([...a]);return;}
+    for(let i=l;i<a.length;i++){[a[l],a[i]]=[a[i],a[l]];gp(a,l+1);[a[l],a[i]]=[a[i],a[l]];}
+  })([0,1,2,3],0);
+  const evP=allP.filter(p=>{let inv=0;for(let i=0;i<4;i++)for(let j=i+1;j<4;j++)if(p[i]>p[j])inv++;return inv%2===0;});
+  for(const perm of evP){
+    const b=perm.map(i=>base[i]),so=b.map(bv=>bv===0?[1]:[-1,1]);
+    for(const s0 of so[0])for(const s1 of so[1])for(const s2 of so[2])for(const s3 of so[3])
+      v4.push([s0*b[0],s1*b[1],s2*b[2],s3*b[3]]);
+  }
+  const rt=0.42,d4=1.9;
+  const proj=v4.map(([x,y,z,w])=>{
+    const xr=x*Math.cos(rt)-w*Math.sin(rt),wr=x*Math.sin(rt)+w*Math.cos(rt),s=d4/(d4-wr);
+    return v3(xr*s,y*s,z*s);
+  });
+  const mx=Math.max(...proj.map(v=>v.length()));
+  const verts=proj.map(v=>{const sc=v.length()<.001?0:r/mx;return v3(v.x*sc,v.y*sc*.45,v.z*sc);});
+
+  // Find edge length from raw 4D: shortest non-zero distance² = 1/φ²
+  // Build edges from raw 4D distances, use tolerance band around shortest
+  const rawEdgeLen2 = 1/(phi*phi); // ≈ 0.3820
+  const tol = rawEdgeLen2 * 0.25;  // ±25% tolerance
+  const edges=[];
+  for(let i=0;i<v4.length;i++)for(let j=i+1;j<v4.length;j++){
+    let d2=0;for(let k=0;k<4;k++)d2+=(v4[i][k]-v4[j][k])**2;
+    if(d2 > rawEdgeLen2-tol && d2 < rawEdgeLen2+tol) edges.push([i,j]);
+  }
+  return{v:verts,e:edges};
+}
+
+function shp120Cell(r){
+  const verts=[];
+  for(let s=0;s<10;s++){
+    const sr=r*(.12+.88*(s/9)),ro=s*(PI2/PHI)*1.3;
+    for(let i=0;i<60;i++){
+      const th=Math.acos(1-2*(i+.5)/60),ph=PI2*i/PHI+ro;
+      verts.push(v3(sr*Math.sin(th)*Math.cos(ph),sr*Math.cos(th)*.38,sr*Math.sin(th)*Math.sin(ph)));
+    }
+  }
+  return{v:verts,e:[]};
+}
+
+// ─── LEVEL DEFINITIONS ────────────────────────────────────────────────────────
+// yA: A-side Y position (B mirrors at -yA)
+// r:  shape radius
+// dR: default V rotation for B in degrees (the "correct" rotation for each level)
+// aC/bC: A/B colors
+const LEVELS=[
+  {n:'A.0 · 1 · POINT',      mk:r=>shpPoint(),    y:9.60,r:0.001,dR:0,   aC:0x1a2840,bC:0x0e1e18},
+  {n:'A.1 · 3 · TRI',        mk:r=>shpTri(r),     y:8.10,r:0.36, dR:60,  aC:0x264868,bC:0x163426},
+  {n:'A.2 · 4 · TETRA',      mk:r=>shpTetra(r),   y:6.65,r:0.68, dR:45,  aC:0x346898,bC:0x1e5032},
+  {n:'A.3 · 6 · OCTA',       mk:r=>shpOcta(r),    y:5.25,r:1.08, dR:30,  aC:0x4488c0,bC:0x287844},
+  {n:'A.4 · 8 · 16-CELL',    mk:r=>shp16Cell(r),  y:3.90,r:1.55, dR:22,  aC:0x58a8e0,bC:0x36a055},
+  {n:'A.5 · 12 · ICOSA',     mk:r=>shpIcosa(r),   y:2.65,r:2.10, dR:15,  aC:0x6abcf0,bC:0x44bc68},
+  {n:'A.6 · 24 · 24-CELL',   mk:r=>shp24Cell(r),  y:1.55,r:2.90, dR:11,  aC:0x80d0fc,bC:0x55cf7c},
+  {n:'A.7 · 120 · 600-CELL', mk:r=>shp600Cell(r), y:0.75,r:3.60, dR:9,   aC:0x90dcff,bC:0x60d882},
+];
+
+// ─── ROTATE Y ─────────────────────────────────────────────────────────────────
+function ry(verts,deg){
+  if(!deg)return verts;
+  const a=deg*PI/180,c=Math.cos(a),s=Math.sin(a);
+  return verts.map(v=>v3(v.x*c-v.z*s,v.y,v.x*s+v.z*c));
+}
+
+// ─── FRAMING PAIRS ────────────────────────────────────────────────────────────
+function fpairs(vA,vB){
+  if(!vA.length||!vB.length)return[];
+  if(vA.length===1)return vB.map((_,i)=>[0,i]);
+  if(vB.length===1)return vA.map((_,i)=>[i,0]);
+  if(vA.length===vB.length)return vA.map((_,i)=>[i,i]);
+  const angB=vB.map(v=>Math.atan2(v.z,v.x));
+  return vA.map((va,ai)=>{
+    const a=Math.atan2(va.z,va.x);let best=0,bd=Infinity;
+    angB.forEach((ab,bi)=>{let d=Math.abs(a-ab);if(d>PI)d=PI2-d;if(d<bd){bd=d;best=bi;}});
+    return[ai,best];
+  });
+}
+
+// ─── RENDERER ─────────────────────────────────────────────────────────────────
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setClearColor(0x04040e);
+document.body.appendChild(renderer.domElement);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(48,window.innerWidth/window.innerHeight,.01,300);
+
+let drag=false,pm={x:0,y:0},sph={theta:.45,phi:1.05,r:20};
+let tp=null;
+renderer.domElement.addEventListener('mousedown',e=>{drag=true;pm={x:e.clientX,y:e.clientY};focusR=null;});
+window.addEventListener('mouseup',()=>drag=false);
+window.addEventListener('mousemove',e=>{
+  if(!drag)return;
+  sph.theta-=(e.clientX-pm.x)*.006;
+  sph.phi=Math.max(.06,Math.min(PI-.06,sph.phi+(e.clientY-pm.y)*.006));
+  pm={x:e.clientX,y:e.clientY};
+});
+renderer.domElement.addEventListener('wheel',e=>{sph.r=Math.max(5,Math.min(55,sph.r+e.deltaY*.016));focusR=null;});
+renderer.domElement.addEventListener('touchstart',e=>{tp={x:e.touches[0].clientX,y:e.touches[0].clientY};focusR=null;},{passive:true});
+renderer.domElement.addEventListener('touchmove',e=>{
+  if(!tp)return;
+  sph.theta-=(e.touches[0].clientX-tp.x)*.006;
+  sph.phi=Math.max(.06,Math.min(PI-.06,sph.phi+(e.touches[0].clientY-tp.y)*.006));
+  tp={x:e.touches[0].clientX,y:e.touches[0].clientY};
+},{passive:true});
+renderer.domElement.addEventListener('touchend',()=>tp=null,{passive:true});
+
+const root=new THREE.Group();scene.add(root);
+const sg=new THREE.Group();root.add(sg);
+const bhGroup=new THREE.Group();root.add(bhGroup); // black hole — animated separately
+const lblDiv=document.getElementById('lbls');
+
+// Black hole animation refs
+let bhAccretionDisk=null, bhPiRingMat=null, bhTime=0;
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let depth=1;
+let frameOp=.18;
+let spread=1.0;
+let focusY=0;       // camera lookAt Y target
+let focusYTarget=0; // lerp destination
+let focusR=null;    // zoom target (null = auto)
+// Per-level B rotation (start at default dR for each level)
+const rotB=LEVELS.map(l=>l.dR);
+let storedAV=[], storedBV=[]; // for P computation
+
+// ─── PRIMITIVES ───────────────────────────────────────────────────────────────
+function mkDot(pos,col,r=.07){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(r,7,7),new THREE.MeshBasicMaterial({color:col}));
+  m.position.copy(pos);return m;
+}
+function mkSeg(a,b,col,op=1){
+  const g=new THREE.BufferGeometry().setFromPoints([a,b]);
+  return new THREE.Line(g,new THREE.LineBasicMaterial({color:col,transparent:op<1,opacity:op}));
+}
+function mkLoop(pts,col,op){
+  for(let i=0;i<pts.length;i++)sg.add(mkSeg(pts[i],pts[(i+1)%pts.length],col,op));
+}
+function mkRing(y,r,col,op,n=64){
+  const pts=[];for(let i=0;i<=n;i++){const a=i/n*PI2;pts.push(v3(Math.cos(a)*r,y,Math.sin(a)*r));}
+  const g=new THREE.BufferGeometry().setFromPoints(pts);
+  return new THREE.Line(g,new THREE.LineBasicMaterial({color:col,transparent:true,opacity:op}));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CLEAN LINE SYSTEM
+//  Replaces ad-hoc framing with deterministic, orbit-readable connectors.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Should lines be suppressed? (collapse state = sparse by design)
+function shouldSuppressLines(isCollapse){ return isCollapse; }
+
+// Angular pairing helper — returns index in tgt closest in XZ angle to src[i]
+function angNearest(srcV, tgtV){
+  const ta=tgtV.map(v=>Math.atan2(v.z,v.x));
+  return srcV.map(sv=>{
+    const a=Math.atan2(sv.z,sv.x);
+    let bi=0,bd=Infinity;
+    ta.forEach((tb,i)=>{let d=Math.abs(a-tb);if(d>PI)d=PI2-d;if(d<bd){bd=d;bi=i;}});
+    return bi;
+  });
+}
+
+// A → P: each A point fans to nearest P point; capped to keep it readable
+function buildAPConnections(aVerts, pVerts, col, isCollapse){
+  if(isCollapse||!aVerts.length||!pVerts.length) return;
+  const MAX=10;
+  const step=Math.max(1,Math.ceil(aVerts.length/MAX));
+  const pa=angNearest(aVerts,pVerts);
+  for(let i=0;i<aVerts.length;i+=step){
+    sg.add(mkSeg(aVerts[i], pVerts[pa[i]], col, frameOp*.55));
+  }
+}
+
+// P → B: symmetrically, P to nearest B
+function buildPBConnections(pVerts, bVerts, col, isCollapse){
+  if(isCollapse||!bVerts.length||!pVerts.length) return;
+  const MAX=10;
+  const step=Math.max(1,Math.ceil(bVerts.length/MAX));
+  const pb=angNearest(bVerts,pVerts);
+  for(let i=0;i<bVerts.length;i+=step){
+    sg.add(mkSeg(bVerts[i], pVerts[pb[i]], col, frameOp*.45));
+  }
+}
+
+// Shell lines: connect points within the same radial band in angular order
+// → produces the "orbit ring" feel
+function buildShellLines(pts, col, op, isCollapse){
+  if(isCollapse||pts.length<2) return;
+  // Sort by XZ angle
+  const sorted=[...pts].sort((a,b)=>Math.atan2(a.z,a.x)-Math.atan2(b.z,b.x));
+  // Connect neighbours if they're within 35° of each other
+  const thresh=35*PI/180;
+  for(let i=0;i<sorted.length;i++){
+    const j=(i+1)%sorted.length;
+    const ai=Math.atan2(sorted[i].z,sorted[i].x);
+    const aj=Math.atan2(sorted[j].z,sorted[j].x);
+    let da=Math.abs(aj-ai); if(da>PI)da=PI2-da;
+    if(da<thresh) sg.add(mkSeg(sorted[i],sorted[j],col,op));
+  }
+}
+
+// Cross-level funnel: restrained spokes between neighbouring depth layers
+function buildCrossLevelLines(rA,yA, rB,yB, nSpk, colA, colB, isCollapse){
+  if(isCollapse) return;
+  for(let i=0;i<nSpk;i++){
+    const a=i/nSpk*PI2;
+    const ca=Math.cos(a), sa=Math.sin(a);
+    sg.add(mkSeg(v3(ca*rA, yA, sa*rA), v3(ca*rB, yB, sa*rB), colA, .28));
+    sg.add(mkSeg(v3(ca*rA,-yA, sa*rA), v3(ca*rB,-yB, sa*rB), colB, .22));
+  }
+}
+
+// Classify line coherence from pVerts + connection counts
+function classifyLineState(pVerts, isCollapse, lineCount){
+  if(isCollapse)    return{cls:'COLLAPSED', col:'warn'};
+  if(!pVerts||pVerts.length===0) return{cls:'BROKEN',   col:'warn'};
+  if(lineCount===0) return{cls:'BROKEN',   col:'warn'};
+  const ratio=lineCount/Math.max(1,pVerts.length);
+  if(ratio>3.5)     return{cls:'CLEAN',    col:'go'};
+  if(ratio>1.5)     return{cls:'PARTIAL',  col:'gd'};
+  return             {cls:'BROKEN',    col:'warn'};
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  P CLOUD ANALYSIS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function analyzePCloud(pVerts, activeDepth, rotBArr, isCollapse){
+  if(!pVerts||pVerts.length===0){
+    return{
+      count:0, minR:0, maxR:0, avgR:0, shells:0,
+      density:'COLLAPSE', sym:'LOCKED', rotState:'PI-LOCK',
+      collapseState:'COLLAPSE TRIGGERED', densityCol:'warn',
+      symCol:'warn', rotCol:'warn', collapseCol:'warn'
+    };
+  }
+
+  // Radial stats
+  const rs=pVerts.map(p=>Math.sqrt(p.x*p.x+p.z*p.z));
+  const minR=Math.min(...rs), maxR=Math.max(...rs)||0.01;
+  const avgR=rs.reduce((a,b)=>a+b,0)/rs.length;
+
+  // Shell estimate: bin into 8 radial bands
+  const NBANDS=8;
+  const bands=new Array(NBANDS).fill(0);
+  rs.forEach(r=>{ const bi=Math.min(NBANDS-1,Math.floor((r/maxR)*NBANDS)); bands[bi]++; });
+  const shells=bands.filter(b=>b>0).length;
+
+  // Density classification
+  let density='SPARSE', densityCol='warn';
+  const n=pVerts.length;
+  if(isCollapse){             density='COLLAPSE'; densityCol='warn'; }
+  else if(n<=2){              density='CORE';     densityCol='gd';   }
+  else if(n<=8){              density='SPARSE';   densityCol='warn'; }
+  else if(shells<=2&&n>4){    density='CORE';     densityCol='gd';   }
+  else if(shells>=5&&n>30){   density='GALAXY';   densityCol='hi';   }
+  else if(shells>=3&&n>15){   density='WEB';      densityCol='go';   }
+  else if(n>8){               density='LATTICE';  densityCol='go';   }
+
+  // Symmetry: split XZ into 6 sectors, compare opposite pairs
+  const NSEC=6;
+  const sec=new Array(NSEC).fill(0);
+  pVerts.forEach(p=>{ const a=(Math.atan2(p.z,p.x)+PI)/(PI2);
+    sec[Math.min(NSEC-1,Math.floor(a*NSEC))]++; });
+  const half=NSEC/2;
+  let mirrorScore=0;
+  for(let i=0;i<half;i++){
+    const tot=sec[i]+sec[i+half];
+    if(tot>0) mirrorScore+=Math.min(sec[i],sec[i+half])/tot;
+  }
+  mirrorScore/=half;
+  let sym,symCol;
+  if(isCollapse){                    sym='LOCKED';   symCol='warn'; }
+  else if(mirrorScore>.82){          sym='RADIAL';   symCol='hi';   }
+  else if(mirrorScore>.60){          sym='MIRRORED'; symCol='go';   }
+  else if(mirrorScore>.35){          sym='AXIAL';    symCol='gd';   }
+  else{                              sym='BROKEN';   symCol='warn'; }
+
+  // Rotation state
+  const active=rotBArr.slice(0,activeDepth);
+  const allPi=active.every(r=>r===180);
+  const allDef=active.every((r,i)=>r===LEVELS[i].dR);
+  const anyPi=active.some(r=>r===180);
+  const allSame=active.every(r=>r===active[0]);
+  let rotState, rotCol;
+  if(allPi)        { rotState='PI-LOCK';  rotCol='warn'; }
+  else if(allDef)  { rotState='ALIGNED';  rotCol='go';   }
+  else if(allSame) { rotState='OFFSET';   rotCol='gd';   }
+  else if(anyPi)   { rotState='CASCADE';  rotCol='gd';   }
+  else             { rotState='MIXED';    rotCol='hi';   }
+
+  // Collapse state
+  const collapseState = allPi ? 'COLLAPSE TRIGGERED' : 'STABLE';
+  const collapseCol   = allPi ? 'warn' : 'go';
+
+  return{ count:n, minR, maxR, avgR, shells,
+    density, densityCol, sym, symCol,
+    rotState, rotCol, collapseState, collapseCol };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  ANALYSIS PANEL UPDATE
+// ═══════════════════════════════════════════════════════════════════════════
+
+let _lineCount=0; // set during build
+
+function updateAnalysisPanel(pVerts, isCollapse){
+  const an=analyzePCloud(pVerts, depth, rotB, isCollapse);
+  const ls=classifyLineState(pVerts, isCollapse, _lineCount);
+  const lv=LEVELS[depth-1];
+
+  function set(id,txt,cls=''){
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.textContent=txt;
+    el.className='ap-val'+(cls?' '+cls:'');
+  }
+  set('av-depth',  depth,                       'hi');
+  set('av-level',  lv.n.replace('A.'+( depth-1)+' · ',''), '');
+  set('av-pv',     an.count,                    'gd');
+  set('av-span',   an.maxR.toFixed(2)+'u',      '');
+  set('av-shells', an.shells,                   '');
+  set('av-density',an.density,                  an.densityCol);
+  set('av-sym',    an.sym,                      an.symCol);
+  set('av-rot',    an.rotState,                 an.rotCol);
+  set('av-collapse',an.collapseState,           an.collapseCol);
+  set('av-lines',  ls.cls,                      ls.col);
+  return an;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  DISCOVERY EVENTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+let _discTimer=null;
+function showDiscovery(msg){
+  const el=document.getElementById('disc');
+  el.textContent=msg; el.classList.add('show');
+  clearTimeout(_discTimer);
+  _discTimer=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+function checkDiscovery(an){
+  if(an.collapseState==='COLLAPSE TRIGGERED'){ showDiscovery('⚠  COLLAPSE TRIGGERED'); return; }
+  if(an.count>=40&&an.shells>=5){             showDiscovery('◈  COMPLEX EMERGENCE');  return; }
+  if(an.sym==='RADIAL'&&an.count>10){         showDiscovery('◎  RADIAL LOCK');         return; }
+  if(an.density==='CORE'&&an.count<=4){       showDiscovery('·  CORE SINGULARITY');    return; }
+  if(_lineCount>0&&an.sym==='RADIAL'&&_lineCount/Math.max(1,an.count)>4){ showDiscovery('☉  ORBITAL LOCK'); return; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  EXPLORE SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Curated sweep: per-depth a set of interesting rotation configs
+const EXPLORE_ROTS = [0, 15, 30, 45, 60, 90, 120, 150, 180]; // subset applied per level
+let _exploring=false, _explorePaused=false, _exploreTimer=null, _exploreIdx=0;
+let _exploreQueue=[];
+let exploreSpeed=1400; // ms per step — user-adjustable
+
+function buildExploreQueue(){
+  _exploreQueue=[];
+  // For each depth 1..8, try 5 curated rotation presets
+  const presets=[
+    rots=>rots.map((_,i)=>LEVELS[i].dR),              // aligned
+    rots=>rots.map(()=>0),                             // all 0
+    rots=>rots.map(()=>90),                            // all 90
+    rots=>rots.map((_,i)=>i%2===0?0:90),               // alternating
+    rots=>rots.map(()=>180),                           // collapse
+  ];
+  for(let d=1;d<=8;d++){
+    presets.forEach(fn=>{
+      const r=fn(LEVELS).slice(0,d);
+      _exploreQueue.push({depth:d, rots:r});
+    });
+  }
+}
+
+function setSpeed(ms){
+  exploreSpeed=ms;
+  // Highlight active speed button
+  ['spd-slow','spd-med','spd-fast'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    const speeds={'spd-slow':2400,'spd-med':1400,'spd-fast':600};
+    const active=(speeds[id]===ms);
+    el.style.borderColor=active?'#f0c040':'#1a2a38';
+    el.style.color=active?'#f0c040':'#1a3040';
+  });
+}
+
+function toggleExplore(){
+  _exploring=!_exploring;
+  _explorePaused=false;
+  const btn=document.getElementById('btn-explore');
+  const pp=document.getElementById('btn-epause');
+  const rr=document.getElementById('btn-ereset');
+  const strip=document.getElementById('xstrip');
+  if(_exploring){
+    btn.style.borderColor='#f0c040'; btn.style.color='#f0c040';
+    pp.style.display=''; pp.textContent='❙❙ PAUSE';
+    pp.style.borderColor='#1a2a38'; pp.style.color='#1a3040';
+    rr.style.display='';
+    rr.style.borderColor='#1a2a38'; rr.style.color='#1a3040';
+    strip.classList.add('on');
+    buildExploreQueue(); _exploreIdx=0;
+    stepExplore();
+  } else {
+    btn.style.borderColor='#1a2a38'; btn.style.color='#1a3040';
+    btn.textContent='◈ EXPLORE';
+    pp.style.display='none';
+    rr.style.display='none';
+    strip.classList.remove('on');
+    clearTimeout(_exploreTimer);
+    focusR=null;
+  }
+}
+
+function toggleExplorePause(){
+  if(!_exploring) return;
+  _explorePaused=!_explorePaused;
+  const pp=document.getElementById('btn-epause');
+  const strip=document.getElementById('xstrip');
+  if(_explorePaused){
+    clearTimeout(_exploreTimer);
+    pp.textContent='▶ RESUME';
+    pp.style.borderColor='#f0c040'; pp.style.color='#f0c040';
+    strip.classList.remove('on');
+  } else {
+    pp.textContent='❙❙ PAUSE';
+    pp.style.borderColor='#1a2a38'; pp.style.color='#1a3040';
+    strip.classList.add('on');
+    stepExplore();
+  }
+}
+
+function resetExplore(){
+  if(!_exploring) return;
+  clearTimeout(_exploreTimer);
+  _explorePaused=false;
+  _exploreIdx=0;
+  const pp=document.getElementById('btn-epause');
+  pp.textContent='❙❙ PAUSE';
+  pp.style.borderColor='#1a2a38'; pp.style.color='#1a3040';
+  document.getElementById('xstrip').classList.add('on');
+  document.getElementById('elog').innerHTML='<span class="el-entry" style="color:#0a1520">— reset —</span>';
+  stepExplore();
+}
+
+function stepExplore(){
+  if(!_exploring) return;
+  if(_exploreIdx>=_exploreQueue.length){ toggleExplore(); return; }
+  const cfg=_exploreQueue[_exploreIdx++];
+  depth=cfg.depth;
+  cfg.rots.forEach((r,i)=>{ rotB[i]=r; });
+  document.getElementById('dval').textContent=depth;
+  build();
+  // No camera movement during explore — user stays in full control.
+  _exploreTimer=setTimeout(stepExplore, exploreSpeed);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  EXPLORE LOG
+// ═══════════════════════════════════════════════════════════════════════════
+
+let pVerts_last=[];
+
+function logExploreEntry(an, ls){
+  const entry=`D${depth} · ${an.rotState} · P=${an.count} · ${an.density} · ${an.sym} · ${ls.cls}`;
+  const log=document.getElementById('elog');
+  const div=document.createElement('div');
+  div.className='el-entry el-new';
+  div.textContent=entry;
+  log.prepend(div);
+  setTimeout(()=>div.classList.remove('el-new'),800);
+  while(log.children.length>55) log.removeChild(log.lastChild);
+}
+
+// ─── BUILD ────────────────────────────────────────────────────────────────────
+function build(){
+  while(sg.children.length)sg.remove(sg.children[0]);
+  lblDiv.innerHTML='';
+  storedAV=[]; storedBV=[];
+  _lineCount=0;
+
+  const NL=LEVELS.length;
+  const bright=(li)=>li/(NL-1); // 0=dim(outermost), 1=bright(innermost)
+
+  // W axis — extends to outermost active level * spread + buffer
+  const axSpan=LEVELS[depth-1].y*spread+1.2;
+  sg.add(mkSeg(v3(0,-axSpan,0),v3(0,axSpan,0),0x060810,.6));
+
+  for(let li=0;li<depth;li++){
+    const lv=LEVELS[li];
+    const br=0.18+0.7*bright(li);
+    const eOp=0.15+0.55*bright(li);
+
+    const y=lv.y*spread;
+
+    // Build shape (relative, y=0)
+    const rel=lv.mk(lv.r);
+
+    // ── A side (top half, positive Y) ────────────────────────────────────────
+    const aVerts=rel.v.map(v=>v3(v.x,v.y+y,v.z));
+    storedAV.push(aVerts);
+
+    // ── B side (bottom half, Y-reflected, then rotated by rotB[li]) ──────────
+    const bRelMirror=rel.v.map(v=>v3(v.x,-v.y,v.z));
+    const bRelRot=ry(bRelMirror,rotB[li]);
+    const bVerts=bRelRot.map(v=>v3(v.x,v.y-y,v.z));
+    storedBV.push(bVerts);
+
+    // Glass planes (A and B)
+    const pw=Math.max(.4,lv.r)*2.2;
+    function glassPlane(gy,col){
+      const geo=new THREE.BoxGeometry(pw,.018,pw);
+      const f=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.012,side:THREE.DoubleSide,depthWrite:false}));
+      f.position.y=gy;
+      const w=new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:col,transparent:true,opacity:.22}));
+      w.position.y=gy;
+      sg.add(f);sg.add(w);
+    }
+    glassPlane( y, lv.aC);
+    glassPlane(-y, lv.bC);
+
+    // Draw A verts + edges
+    const dR=lv.r<.01?.12:aVerts.length>400?.018:aVerts.length>80?.03:aVerts.length>20?.05:.09;
+    const skip=aVerts.length>400?5:aVerts.length>100?3:aVerts.length>30?2:1;
+    aVerts.forEach((v,i)=>{if(i%skip===0)sg.add(mkDot(v,lv.aC,dR));});
+    if(rel.e.length>0&&rel.e.length<1200)
+      rel.e.forEach(([a,b])=>sg.add(mkSeg(aVerts[a],aVerts[b],lv.aC,eOp)));
+
+    // Draw B verts + edges
+    bVerts.forEach((v,i)=>{if(i%skip===0)sg.add(mkDot(v,lv.bC,dR));});
+    if(rel.e.length>0&&rel.e.length<1200)
+      rel.e.forEach(([a,b])=>sg.add(mkSeg(bVerts[a],bVerts[b],lv.bC,eOp)));
+
+    // ── Clean framing: A→P (through centre) and B→P — orbit-style ──────────
+    const isCollapse=Array.from({length:depth},(_,i)=>rotB[i]===180).every(Boolean);
+    if(!shouldSuppressLines(isCollapse)){
+      const pCentre=v3(0,0,0);
+      const MAX=Math.min(12, aVerts.length);
+      const astep=Math.max(1,Math.ceil(aVerts.length/MAX));
+      const bstep=Math.max(1,Math.ceil(bVerts.length/MAX));
+      for(let i=0;i<aVerts.length;i+=astep)
+        sg.add(mkSeg(aVerts[i], pCentre, lv.aC, frameOp*.38));
+      for(let i=0;i<bVerts.length;i+=bstep)
+        sg.add(mkSeg(bVerts[i], pCentre, lv.bC, frameOp*.30));
+      // Orbital ring on the A and B planes themselves
+      if(aVerts.length>=3){
+        const aXZ=aVerts.map(v=>v3(v.x,v.y,v.z));
+        buildShellLines(aXZ, lv.aC, frameOp*.28, false);
+      }
+      if(bVerts.length>=3){
+        const bXZ=bVerts.map(v=>v3(v.x,v.y,v.z));
+        buildShellLines(bXZ, lv.bC, frameOp*.22, false);
+      }
+      _lineCount += Math.floor(aVerts.length/astep)+Math.floor(bVerts.length/bstep);
+    }
+
+    // Funnel connectors to next level — clean restrained spokes
+    if(li<depth-1){
+      const nxt=LEVELS[li+1];
+      const ny=nxt.y*spread;
+      const nSpk=Math.min(8,2+li*2);
+      const isCol=Array.from({length:depth},(_,i)=>rotB[i]===180).every(Boolean);
+      buildCrossLevelLines(lv.r<.01?0:lv.r, y, nxt.r, ny, nSpk, lv.aC, lv.bC, isCol);
+    }
+
+    // Floating labels
+    function addLbl(id,ly){
+      const lbl=document.createElement('div');
+      lbl.className='lbl';lbl.id=id;
+      lbl.style.color='#'+lv.aC.toString(16).padStart(6,'0');
+      lbl.textContent=(ly>0?lv.n:lv.n.replace('A.','B.'))+' · V='+rotB[li]+'°';
+      lblDiv.appendChild(lbl);
+    }
+    addLbl('la'+li, y);
+    addLbl('lb'+li,-y);
+  }
+
+  // ─── P — emergent center ──────────────────────────────────────────────────
+  // Take ALL A×B midpoints (capped), sort radially, render as galaxy
+  const aIn=storedAV[depth-1], bIn=storedBV[depth-1];
+  const lvP=LEVELS[depth-1];
+
+  // Generate point cloud: every A paired with every B (sampled)
+  const rawP=[];
+  const aStep=Math.max(1,Math.ceil(aIn.length/40));
+  const bStep=Math.max(1,Math.ceil(bIn.length/40));
+  for(let ai=0;ai<aIn.length;ai+=aStep){
+    for(let bi=0;bi<bIn.length;bi+=bStep){
+      const ap=aIn[ai],bp=bIn[bi];
+      rawP.push(v3((ap.x+bp.x)*.5, 0, (ap.z+bp.z)*.5));
+    }
+  }
+
+  // Sort by radial distance from center
+  rawP.sort((a,b)=>Math.sqrt(a.x*a.x+a.z*a.z)-Math.sqrt(b.x*b.x+b.z*b.z));
+
+  // Deduplicate nearby points
+  const pVerts=[];
+  const minDist=0.04;
+  rawP.forEach(p=>{
+    if(!pVerts.some(q=>p.distanceTo(q)<minDist)) pVerts.push(p);
+  });
+
+  // Find max radius for normalization
+  let maxR=0.01;
+  pVerts.forEach(p=>{const r=Math.sqrt(p.x*p.x+p.z*p.z);if(r>maxR)maxR=r;});
+
+  // Galaxy rendering — 10 radial shells, bright core fading out
+  const P_COLS=[0xf8e060,0xf0c040,0xe8a030,0xd08820,0xb87018,0x9a5810,0x7c400c,0x602c08,0x461e06,0x2e1204];
+  const nShells=10;
+  const shellBands=Array.from({length:nShells},()=>[]);
+  pVerts.forEach(p=>{
+    const r=Math.sqrt(p.x*p.x+p.z*p.z)/maxR;
+    const si=Math.min(nShells-1,Math.floor(r*nShells));
+    shellBands[si].push(p);
+  });
+
+  shellBands.forEach((band,si)=>{
+    if(!band.length) return;
+    const col=P_COLS[si];
+    // dot size: bigger+brighter at core
+    const dotR=si===0?.16:si<=2?.10:si<=5?.06:.035;
+    const opacity=1.0-si*.07;
+    band.forEach(p=>{
+      const m=new THREE.Mesh(
+        new THREE.SphereGeometry(dotR,6,6),
+        new THREE.MeshBasicMaterial({color:col,transparent:opacity<1,opacity:opacity})
+      );
+      m.position.copy(p);
+      sg.add(m);
+    });
+    // Connect nearby points in same shell with faint arcs (galaxy web)
+    if(si>=2 && band.length>3 && frameOp>0.05){
+      for(let i=0;i<band.length;i++){
+        for(let j=i+1;j<band.length;j++){
+          const d=band[i].distanceTo(band[j]);
+          if(d<maxR*.35){
+            const op=frameOp*(1-d/(maxR*.35))*(1-si/nShells)*.6;
+            if(op>.015) sg.add(mkSeg(band[i],band[j],col,op));
+          }
+        }
+      }
+    }
+  });
+
+  // Glow rings — shell 0 has core dots; fallback if pVerts empty
+  if(pVerts.length===0) sg.add(mkDot(v3(0,0,0), 0xfff0a0, .18));
+  sg.add(mkRing(0,maxR*.22,0xf0c040,.35));
+  sg.add(mkRing(0,maxR*.55,0xf0c040,.15));
+  sg.add(mkRing(0,maxR*.85,0xf0c040,.06));
+
+  // P framing from innermost A and B toward P cloud
+  const pfMax=8;
+  const pfa=aIn.filter((_,i)=>i%Math.ceil(aIn.length/pfMax)===0);
+  const pfb=bIn.filter((_,i)=>i%Math.ceil(bIn.length/pfMax)===0);
+  pfa.forEach(av=>sg.add(mkSeg(av,v3(0,0,0),0x2a4030,frameOp*.5)));
+  pfb.forEach(bv=>sg.add(mkSeg(bv,v3(0,0,0),0x1e2a18,frameOp*.5)));
+
+  // P glass plane
+  const ppw=(lvP.r+.4)*2.0;
+  const pgeo=new THREE.BoxGeometry(ppw,.018,ppw);
+  const pf=new THREE.Mesh(pgeo,new THREE.MeshBasicMaterial({color:0xf0c040,transparent:true,opacity:.015,side:THREE.DoubleSide,depthWrite:false}));
+  const pw2=new THREE.LineSegments(new THREE.EdgesGeometry(pgeo),new THREE.LineBasicMaterial({color:0xf0c040,transparent:true,opacity:.25}));
+  sg.add(pf);sg.add(pw2);
+
+  // ── Clean P ↔ A / P ↔ B connections ──────────────────────────────────────
+  const isColFinal=Array.from({length:depth},(_,i)=>rotB[i]===180).every(Boolean);
+  if(!isColFinal && pVerts.length>0){
+    buildAPConnections(aIn, pVerts, 0xa8d8ea, false);
+    buildPBConnections(pVerts, bIn, 0x7ec8a0, false);
+    // Orbital shell rings on the P plane
+    buildShellLines(pVerts, 0xf0c040, frameOp*.35, false);
+    _lineCount += pVerts.length;
+  }
+  pVerts_last = pVerts;
+
+  // ─── 🕳 EASTER EGG: ALL V = 180° → BLACK HOLE ──────────────────────────────
+  const allPi=Array.from({length:depth},(_,i)=>rotB[i]===180).every(Boolean);
+
+  // Lock/unlock depth buttons
+  ['d-dn','d-up'].forEach(id=>{
+    const btn=document.getElementById(id);
+    btn.classList.toggle('locked',allPi);
+    btn.disabled=allPi;
+  });
+
+  // Clear bhGroup
+  while(bhGroup.children.length)bhGroup.remove(bhGroup.children[0]);
+  bhAccretionDisk=null; bhPiRingMat=null;
+
+  if(allPi){
+    const PI_DIGITS='14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214';
+    const piD=PI_DIGITS.split('').map(Number);
+
+    function mkMiniBH(cx,cy,cz, r, grp){
+      // Mini void sphere
+      grp.add(new THREE.Mesh(
+        new THREE.SphereGeometry(r*.18,20,20),
+        new THREE.MeshBasicMaterial({color:0x000000})
+      ));
+      // Accretion torus stack
+      const cols=[0xff1500,0xff4800,0xff8800,0xffaa22,0xffee88];
+      cols.forEach((col,i)=>{
+        const tr=r*(.30+i*.14), tube=Math.max(.006,.026-i*.004);
+        const mat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:.18+i*.13});
+        const mesh=new THREE.Mesh(new THREE.TorusGeometry(tr,tube,8,96),mat);
+        mesh.rotation.x=Math.PI/2+(i-2)*.04;
+        grp.add(mesh);
+      });
+      // Photon ring
+      const ph=new THREE.Mesh(
+        new THREE.TorusGeometry(r*.25,0.004,5,96),
+        new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.45})
+      );
+      ph.rotation.x=Math.PI/2;
+      grp.add(ph);
+      // Ghost approx rings (π converging)
+      const APPROX=[[3,1],[22,7],[355,113]];
+      APPROX.forEach(([n,d],i)=>{
+        const ar=(n/d/Math.PI)*r;
+        const ring=new THREE.Mesh(
+          new THREE.TorusGeometry(ar,0.003+i*.002,5,64),
+          new THREE.MeshBasicMaterial({color:0x803010,transparent:true,opacity:.05+i*.09})
+        );
+        ring.rotation.x=Math.PI/2;
+        grp.add(ring);
+      });
+      // π shimmer ring (unreachable)
+      const shimGeo=new THREE.TorusGeometry(r,0.012,8,200);
+      const shimMat=new THREE.MeshBasicMaterial({color:0xf0c040,transparent:true,opacity:0});
+      const shimRing=new THREE.Mesh(shimGeo,shimMat);
+      shimRing.rotation.x=Math.PI/2;
+      grp.add(shimRing);
+      // Polar micro-jets
+      for(const dir of[-1,1]){
+        const jet=new THREE.Mesh(
+          new THREE.CylinderGeometry(r*.02,r*.06,r*2.2,6,1,true),
+          new THREE.MeshBasicMaterial({color:0x4477ff,transparent:true,opacity:.12,side:THREE.DoubleSide})
+        );
+        jet.position.y=dir*r*1.1;
+        grp.add(jet);
+        grp.add(mkDot(v3(0,dir*r*2.3,0),0x3366ff,r*.04,.5));
+      }
+      // π digit particles
+      for(let i=0;i<60;i++){
+        const d1=piD[i%piD.length],d2=piD[(i+1)%piD.length],d3=piD[(i+2)%piD.length];
+        const ang=(d1*36+d2*3.6)*PI/180,rad=r*(.22+(d3/9)*.72),ht=((d1+d2)%10)/10*.22-.11;
+        grp.add(mkDot(v3(Math.cos(ang)*rad,ht,Math.sin(ang)*rad),0xf0c040,.010,.4));
+      }
+      // Move group to position
+      grp.position.set(cx,cy,cz);
+      return shimMat; // return for animation
+    }
+
+    if(depth===1){
+      // TWO BOUNDARY BLACK HOLES
+      const bhR=0.55;
+      const ay=LEVELS[0].y*spread;
+
+      // A black hole (top)
+      const bhA=new THREE.Group();
+      const shimA=mkMiniBH(0,0,0,bhR,bhA);
+      bhA.position.y=ay;
+      bhGroup.add(bhA);
+
+      // B black hole (bottom)  
+      const bhB=new THREE.Group();
+      const shimB=mkMiniBH(0,0,0,bhR,bhB);
+      bhB.position.y=-ay;
+      bhGroup.add(bhB);
+
+      // Gravitational tube between them — W axis glows
+      const tubeSegs=30;
+      for(let i=0;i<tubeSegs;i++){
+        const t=i/tubeSegs, yt=ay*(1-2*t);
+        const r=bhR*(.08+.22*Math.sin(t*PI)); // bulges at center
+        const col=i<tubeSegs*.3?0xff4400:i<tubeSegs*.7?0xf0c040:0xff4400;
+        bhGroup.add(mkDot(v3(0,yt,0),col,r*.15,.25+.4*Math.sin(t*PI)));
+      }
+      // Faint tidal streams from both BHs toward center
+      for(let s=0;s<8;s++){
+        const ang=s/8*PI2;
+        const x=Math.cos(ang)*bhR*.4, z=Math.sin(ang)*bhR*.4;
+        const g=new THREE.BufferGeometry().setFromPoints([v3(x,ay*.85,z),v3(0,0,0),v3(x,-ay*.85,z)]);
+        bhGroup.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:0xff6600,transparent:true,opacity:.08})));
+      }
+      // P proto-singularity at center — small, not yet formed
+      const pProto=new THREE.Mesh(new THREE.SphereGeometry(bhR*.12,16,16),new THREE.MeshBasicMaterial({color:0x000000}));
+      bhGroup.add(pProto);
+      // P singularity glow rings (forming)
+      bhGroup.add(new THREE.Mesh(
+        new THREE.TorusGeometry(bhR*.22,0.005,5,64),
+        new THREE.MeshBasicMaterial({color:0xff3300,transparent:true,opacity:.35})
+      )).rotation&&(bhGroup.children[bhGroup.children.length-1].rotation.x=Math.PI/2);
+      bhGroup.add(new THREE.Mesh(
+        new THREE.TorusGeometry(bhR*.38,0.003,4,64),
+        new THREE.MeshBasicMaterial({color:0xff6600,transparent:true,opacity:.15})
+      )).rotation&&(bhGroup.children[bhGroup.children.length-1].rotation.x=Math.PI/2);
+
+      // Store for animation — both shim mats + disk groups
+      bhAccretionDisk={children:[...bhA.children.filter(c=>c.type==='Group'),...bhB.children.filter(c=>c.type==='Group')]};
+      bhPiRingMat=[shimA,shimB];
+
+      document.getElementById('pcount').textContent='A · SINGULARITY · B · SINGULARITY · P · FORMING · TWO BOUNDARIES REQUIRED';
+
+    } else {
+      // DEEP BLACK HOLE (depth > 1) — full galaxy collapse
+      const bhR=lvP.r*0.85;
+
+      const dGroup=new THREE.Group();
+      const diskCols=[0xff1500,0xff4400,0xff8800,0xffaa22,0xffdd88];
+      diskCols.forEach((col,ri)=>{
+        const r=bhR*(0.30+ri*.15),tube=Math.max(0.01,0.038-ri*.005);
+        const mat=new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.15+ri*.13});
+        const mesh=new THREE.Mesh(new THREE.TorusGeometry(r,tube,8,128),mat);
+        mesh.rotation.x=Math.PI/2+(ri-2)*.04;
+        dGroup.add(mesh);
+      });
+      bhAccretionDisk=dGroup;
+      bhGroup.add(dGroup);
+
+      const APPROX=[[3,1],[22,7],[333,106],[355,113],[103993,33102]];
+      const approxCols=[0x280800,0x501000,0x803010,0xb05018,0xd07030];
+      APPROX.forEach(([n,d],i)=>{
+        const r=(n/d/Math.PI)*bhR;
+        const mat=new THREE.MeshBasicMaterial({color:approxCols[i],transparent:true,opacity:0.06+i*.09});
+        const ring=new THREE.Mesh(new THREE.TorusGeometry(r,0.006+i*.003,5,96),mat);
+        ring.rotation.x=Math.PI/2;
+        bhGroup.add(ring);
+        for(let j=0;j<6;j++){
+          const a=j/6*PI2,h=bhR*(0.05+i*.04);
+          const g=new THREE.BufferGeometry().setFromPoints([v3(Math.cos(a)*r,-h,Math.sin(a)*r),v3(Math.cos(a)*r,h,Math.sin(a)*r)]);
+          bhGroup.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:approxCols[i],transparent:true,opacity:0.04+i*.05})));
+        }
+      });
+      const piRingGeo=new THREE.TorusGeometry(bhR,0.018,10,256);
+      bhPiRingMat=new THREE.MeshBasicMaterial({color:0xf0c040,transparent:true,opacity:0.0});
+      const piRing=new THREE.Mesh(piRingGeo,bhPiRingMat);
+      piRing.rotation.x=Math.PI/2;
+      bhGroup.add(piRing);
+      const photon=new THREE.Mesh(new THREE.TorusGeometry(bhR*.26,0.005,6,128),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.45}));
+      photon.rotation.x=Math.PI/2;
+      bhGroup.add(photon);
+      for(const dir of[-1,1]){
+        for(let i=0;i<5;i++){
+          const jh=bhR*(1.6+i*.8),jr=bhR*(0.038-i*.006);
+          if(jr<=0)break;
+          const mat=new THREE.MeshBasicMaterial({color:0x4477ff,transparent:true,opacity:0.07-i*.01,side:THREE.DoubleSide});
+          const jet=new THREE.Mesh(new THREE.CylinderGeometry(jr*.2,jr,jh,8,1,true),mat);
+          jet.position.y=dir*jh*.5;
+          bhGroup.add(jet);
+        }
+        bhGroup.add(mkDot(v3(0,dir*bhR*3,0),0x3366ff,.07,.6));
+      }
+      bhGroup.add(new THREE.Mesh(new THREE.SphereGeometry(bhR*.19,32,32),new THREE.MeshBasicMaterial({color:0x000000})));
+      for(let arc=0;arc<6;arc++){
+        const arcR=bhR*(0.22+arc*.055),span=PI2*(0.4+arc*.07),start=arc*1.1;
+        const pts=[];
+        for(let i=0;i<=60;i++) pts.push(v3(Math.cos(start+i/60*span)*arcR,(arc-2.5)*.025,Math.sin(start+i/60*span)*arcR));
+        const g=new THREE.BufferGeometry().setFromPoints(pts);
+        bhGroup.add(new THREE.Line(g,new THREE.LineBasicMaterial({color:0xffffff,transparent:true,opacity:0.05-arc*.005})));
+      }
+      for(let i=0;i<180;i++){
+        const d1=piD[i%piD.length],d2=piD[(i+1)%piD.length],d3=piD[(i+2)%piD.length];
+        const ang=(d1*36+d2*3.6)*PI/180,rad=bhR*(0.22+(d3/9)*.78),ht=((d1+d2)%10)/10*.36-.18;
+        bhGroup.add(mkDot(v3(Math.cos(ang)*rad,ht,Math.sin(ang)*rad),0xf0c040,0.016,.4));
+      }
+      document.getElementById('pcount').textContent='V = π · A ↔ B = 180° · THE CORRIDOR COLLAPSES · DEPTH LOCKED';
+    }
+
+    // P label
+    const plblBH=document.createElement('div');
+    plblBH.className='lbl';plblBH.id='lp';
+    plblBH.style.color='#ff3300';plblBH.style.fontSize='10px';
+    plblBH.textContent=depth===1?'P · FORMING':'P · ∞ · SINGULARITY';
+    lblDiv.appendChild(plblBH);
+    // ── Analysis (collapse state) ──
+    const _anBH=updateAnalysisPanel([], true);
+    checkDiscovery(_anBH);
+    if(_exploring) logExploreEntry(_anBH, classifyLineState([], true, 0));
+
+  } else {
+    const plbl=document.createElement('div');
+    plbl.className='lbl';plbl.id='lp';
+    plbl.style.color='#f0c040';plbl.style.fontSize='10px';
+    plbl.textContent='P · GEN'+(depth+1);
+    lblDiv.appendChild(plbl);
+    const seqNums=[1,3,4,6,8,12,24,120];
+    document.getElementById('pcount').textContent='P · '+pVerts.length+' VERTICES · '+seqNums.slice(0,depth).join(' → ')+' → ['+pVerts.length+']';
+    // ── Analysis ──
+    const _an=updateAnalysisPanel(pVerts, false);
+    checkDiscovery(_an);
+    if(_exploring) logExploreEntry(_an, classifyLineState(pVerts, false, _lineCount));
+  }
+
+  // ─── Update side panels ───────────────────────────────────────────────────
+  buildLeftPanel();
+  buildRightPanel();
+  updatePlaneStrip(null);
+}
+
+// ─── LEFT PANEL (active level list) ──────────────────────────────────────────
+function buildLeftPanel(){
+  const el=document.getElementById('left');
+  el.innerHTML=LEVELS.slice(0,depth).map((lv,i)=>`
+    <div class="lr" style="color:#${lv.aC.toString(16).padStart(6,'0')}">${lv.n}</div>
+  `).join('')+`<div class="lr" style="color:#f0c040;margin-top:2px">P · GEN${depth+1}</div>`
+  +LEVELS.slice(0,depth).reverse().map((lv,i)=>`
+    <div class="lr" style="color:#${lv.bC.toString(16).padStart(6,'0')}">${lv.n.replace('A.','B.')}</div>
+  `).join('');
+}
+
+// focusOn: smoothly pan camera Y to a plane. Never changes zoom.
+// Clicking ⊙ buttons calls this — user scroll wheel stays sovereign.
+function focusOn(y){
+  focusYTarget = y;
+  document.querySelectorAll('.vcam').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('vcam_'+Math.round(y*100));
+  if(btn) btn.classList.add('active');
+}
+
+// jumpTo: persistent plane-strip — works any time, including explore/pause
+// li = level index 0-7, or 'P' for the P plane
+function jumpTo(li){
+  const y = (li==='P') ? 0 : LEVELS[li].y * spread;
+  focusYTarget = y;
+  updatePlaneStrip(li);
+}
+
+// Dim buttons for levels beyond current depth; highlight active target
+function updatePlaneStrip(active){
+  const ids=['A0','A1','A2','A3','A4','A5','A6','A7','P'];
+  ids.forEach(id=>{
+    const btn=document.getElementById('pjb-'+id);
+    if(!btn) return;
+    const li=id==='P'?'P':parseInt(id[1]);
+    const inRange=(li==='P') || li<depth;
+    btn.style.opacity=inRange?'1':'0.22';
+    btn.classList.toggle('pj-on', li===active);
+  });
+}
+
+// ─── RIGHT PANEL (V rotation per level) ──────────────────────────────────────
+function buildRightPanel(){
+  const el=document.getElementById('right');
+  el.innerHTML='<div class="rt">V · B ROTATION</div>';
+  for(let i=0;i<depth;i++){
+    const lv=LEVELS[i];
+    const hexA='#'+lv.aC.toString(16).padStart(6,'0');
+    const isLocked=(rotB[i]===lv.dR);
+    const ly=lv.y*spread;
+    const camId='vcam_'+Math.round(ly*100);
+    const row=document.createElement('div');
+    row.className='vr'+(isLocked?' locked':'');
+    row.id='vrow'+i;
+    row.innerHTML=`
+      <button class="vcam" id="${camId}" style="border-color:${hexA}33;color:${hexA}55" title="focus camera here">⊙</button>
+      <span class="vn" style="color:${hexA}">${lv.n.replace('A.'+i+' · ','')}</span>
+      <button class="vb" id="vdn${i}" style="border-color:${hexA}33;color:${hexA}">◄</button>
+      <span class="vv" id="vval${i}">${rotB[i]}°</span>
+      <button class="vb" id="vup${i}" style="border-color:${hexA}33;color:${hexA}">►</button>
+      <span class="vreset" id="vrst${i}" style="color:${hexA}" title="reset to correct angle">↺</span>
+    `;
+    el.appendChild(row);
+    row.querySelector('#'+camId).onclick=()=>focusOn(ly);
+    row.querySelector('#vdn'+i).onclick=()=>{ rotB[i]=((rotB[i]-5)+360)%360; build(); };
+    row.querySelector('#vup'+i).onclick=()=>{ rotB[i]=(rotB[i]+5)%360; build(); };
+    row.querySelector('#vrst'+i).onclick=()=>{ rotB[i]=lv.dR; build(); };
+  }
+  // P focus button
+  const prow=document.createElement('div');
+  prow.className='vr';
+  const pcamId='vcam_p';
+  prow.innerHTML=`<button class="vcam" id="${pcamId}" style="border-color:#f0c04033;color:#f0c04088" title="focus camera on P">⊙</button><span class="vn" style="color:#f0c040">P · GEN${depth+1}</span>`;
+  el.appendChild(prow);
+  prow.querySelector('#'+pcamId).onclick=()=>focusOn(0);
+}
+
+// ─── DEPTH ────────────────────────────────────────────────────────────────────
+document.getElementById('d-dn').onclick=()=>{
+  if(depth>1){depth--;document.getElementById('dval').textContent=depth;build();autoZoom();}
+};
+document.getElementById('d-up').onclick=()=>{
+  if(depth<8){depth++;document.getElementById('dval').textContent=depth;build();autoZoom();}
+};
+
+// ─── SPREAD SLIDER ────────────────────────────────────────────────────────────
+const ssl=document.getElementById('ssl');
+let spreadPending=false;
+ssl.oninput=()=>{
+  spread=parseInt(ssl.value)/100;
+  document.getElementById('svl').textContent=spread.toFixed(1)+'×';
+  const pct=((parseInt(ssl.value)-50)/(600-50))*100;
+  ssl.style.setProperty('--spct',pct+'%');
+  if(!spreadPending){
+    spreadPending=true;
+    requestAnimationFrame(()=>{build();spreadPending=false;});
+  }
+};
+ssl.style.setProperty('--spct','20%');
+
+// ─── FRAMING SLIDER ───────────────────────────────────────────────────────────
+const fsl=document.getElementById('fsl');
+fsl.oninput=()=>{
+  frameOp=parseInt(fsl.value)/100;
+  document.getElementById('fvl').textContent=fsl.value+'%';
+  fsl.style.setProperty('--pct',fsl.value+'%');
+  build();
+};
+fsl.style.setProperty('--pct','18%');
+
+// ─── AUTO ZOOM ────────────────────────────────────────────────────────────────
+function autoZoom(){
+  const outerY = LEVELS[0].y * spread;
+  const outerR = LEVELS[depth-1].r + 0.5;
+  const needed = Math.sqrt(outerR*outerR + outerY*outerY) * 1.35 * 2;
+  const fovRad = camera.fov * PI/180;
+  sph.r = Math.max(6, needed / (2*Math.tan(fovRad/2)));
+}
+
+document.getElementById('camreset').onclick=()=>{
+  focusYTarget=0; focusR=null;
+  document.querySelectorAll('.vcam').forEach(b=>b.classList.remove('active'));
+  autoZoom();
+};
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+build();
+autoZoom();
+
+// ─── LABEL PROJECTION ─────────────────────────────────────────────────────────
+function project(vec){
+  // Temporarily adjust camera lookAt for projection
+  const tmp=camera.clone();
+  tmp.position.set(
+    sph.r*Math.sin(sph.phi)*Math.sin(sph.theta),
+    sph.r*Math.cos(sph.phi)+focusY,
+    sph.r*Math.sin(sph.phi)*Math.cos(sph.theta)
+  );
+  tmp.lookAt(0,focusY,0);
+  tmp.updateMatrixWorld();
+  tmp.updateProjectionMatrix();
+  const c=vec.clone().project(tmp);
+  return{x:(c.x*.5+.5)*window.innerWidth,y:(c.y*-.5+.5)*window.innerHeight};
+}
+
+// ─── ANIMATE ─────────────────────────────────────────────────────────────────
+function animate(){
+  requestAnimationFrame(animate);
+  if(!drag&&!tp)sph.theta+=.0006;
+
+  // Lerp focusY — snap when close so it stops pulling
+  const dy = focusYTarget - focusY;
+  focusY += Math.abs(dy) > 0.004 ? dy * 0.08 : dy;
+
+  // Lerp zoom only when explicitly triggered (focusR set by autoZoom/camreset)
+  // Null it out once arrived so manual scroll is never overridden again
+  if(focusR !== null){
+    const dr = focusR - sph.r;
+    if(Math.abs(dr) < 0.04){ sph.r = focusR; focusR = null; }
+    else sph.r += dr * 0.08;
+  }
+
+  camera.position.set(
+    sph.r*Math.sin(sph.phi)*Math.sin(sph.theta),
+    sph.r*Math.cos(sph.phi) + focusY,
+    sph.r*Math.sin(sph.phi)*Math.cos(sph.theta)
+  );
+  camera.lookAt(0, focusY, 0);
+
+  // Animate black hole
+  if(bhAccretionDisk||bhPiRingMat){
+    bhTime+=0.016;
+    if(bhAccretionDisk) bhAccretionDisk.children.forEach((ring,i)=>{ if(ring.rotation) ring.rotation.z+=0.004+i*.0015; });
+    const shimmer=0.04+0.07*Math.sin(bhTime*.7)+0.03*Math.sin(bhTime*1.3+1.1);
+    if(bhPiRingMat){
+      if(Array.isArray(bhPiRingMat)) bhPiRingMat.forEach(m=>m.opacity=shimmer);
+      else bhPiRingMat.opacity=shimmer;
+    }
+  }
+
+  for(let li=0;li<depth;li++){
+    const lv=LEVELS[li];
+    const rOff=lv.r<.01?.25:lv.r+.35;
+    const ly=lv.y*spread;
+    const la=document.getElementById('la'+li);
+    const lb=document.getElementById('lb'+li);
+    if(la){const p=project(v3(rOff, ly,0));la.style.left=(p.x+4)+'px';la.style.top=(p.y-5)+'px';}
+    if(lb){const p=project(v3(rOff,-ly,0));lb.style.left=(p.x+4)+'px';lb.style.top=(p.y-5)+'px';}
+  }
+  const plbl=document.getElementById('lp');
+  if(plbl){const p=project(v3(LEVELS[depth-1].r+.35,0,0));plbl.style.left=(p.x+4)+'px';plbl.style.top=(p.y-5)+'px';}
+
+  renderer.render(scene,camera);
+}
+window.addEventListener('resize',()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
+animate();
+</script>
+</body>
+</html>

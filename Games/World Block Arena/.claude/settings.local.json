@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(*)",
+      "Read(*)",
+      "Write(*)",
+      "Edit(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "mcp__Claude_Preview__*",
+      "Skill(*)",
+      "Bash(/c/Users/thefi/AppData/Local/Programs/Python/*/python.exe)",
+      "Bash(--version)",
+      "Read(//c/Users/thefi/AppData/Local/Programs/**)",
+      "Bash(powershell.exe -ExecutionPolicy Bypass -File \"/c/Users/thefi/OneDrive/Desktop/CARD BLOCK/generate_midi.ps1\")",
+      "Bash(py --version)",
+      "Bash(where.exe python:*)",
+      "Bash(ls /c/Python*)",
+      "Read(//c/Program Files/**)",
+      "Bash(/c/Users/thefi/AppData/Local/Programs/Python/Python314/python.exe --version)",
+      "Bash(/c/Users/thefi/AppData/Local/Programs/Python/Python314/python.exe -m pip install midiutil)",
+      "Bash(/c/Users/thefi/AppData/Local/Programs/Python/Python314/python.exe \"/c/Users/thefi/OneDrive/Desktop/CARD BLOCK/generate_midi.py\")"
+    ]
+  }
+}

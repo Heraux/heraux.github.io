@@ -1,0 +1,3423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Earth: Just One More Year (Mobile)</title>
+<style>
+
+/* ═══════════════════════════════════════════════════════════
+   RESET & BASE
+   ═══════════════════════════════════════════════════════════ */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #000;
+  overflow: hidden;
+  font-family: 'Courier New', monospace;
+  touch-action: none;
+}
+canvas {
+  display: block;
+  position: absolute;
+  top: 0; left: 0;
+  cursor: grab;
+}
+canvas.dragging { cursor: grabbing; }
+
+/* ═══════════════════════════════════════════════════════════
+   HUD OVERLAY
+   ═══════════════════════════════════════════════════════════ */
+
+#hud {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+}
+
+/* ── Clock (top-right) ── */
+#clock {
+  position: absolute;
+  top: 42px; right: 10px;
+  background: rgba(0,0,0,0.9);
+  border: 1px solid #00ff41;
+  font-size: 10px;
+  color: #00ff41;
+  line-height: 1.8;
+  text-align: right;
+  min-width: 138px;
+}
+#clock .date {
+  font-size: 13px;
+  font-weight: bold;
+  color: #fff;
+  letter-spacing: 2px;
+}
+#clock-body { padding: 0 10px 8px 10px; }
+
+/* Stability bar */
+.sbar {
+  width: 100%; height: 4px;
+  background: #222;
+  margin-top: 3px;
+  border: 1px solid #333;
+}
+.sfill { height: 100%; transition: width .4s; }
+
+/* ── Top resource bar ── */
+#resbar {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  background: rgba(0,0,0,0.92);
+  border-bottom: 1px solid #222;
+  font-size: 9px;
+  pointer-events: auto;
+  z-index: 5;
+  height: 32px;
+}
+#resbar-ship, #resbar-earth {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 8px;
+  overflow-x: auto;
+}
+#resbar-ship { border-right: 1px solid #333; }
+.rb-label {
+  font-size: 7px;
+  letter-spacing: 1px;
+  color: #777;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+.rb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 5px;
+  white-space: nowrap;
+  font-size: 8px;
+}
+.rb-item .rb-key { color: #aaa; }
+.rb-item .rb-val { color: #ccc; font-weight: bold; }
+.rb-item .rb-arrow { font-size: 7px; margin-left: 1px; }
+.rb-arrow.up { color: #44ff88; }
+.rb-arrow.down { color: #ff6666; }
+.rb-arrow.flat { color: #777; }
+
+/* ── Panel headers (reusable) ── */
+.win-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  cursor: pointer;
+  user-select: none;
+  pointer-events: auto;
+  border-bottom: 1px solid #222;
+}
+.win-hdr:hover { background: rgba(0,255,65,.06); }
+.win-arrow { color: #00ff41; font-size: 10px; }
+.win-title { color: #fff; font-size: 10px; letter-spacing: 1px; }
+
+/* ── Top-left dropdown menu ── */
+#topmenu {
+  position: absolute;
+  top: 42px; left: 10px;
+  min-width: 170px; max-width: 210px;
+  background: rgba(0,0,0,0.92);
+  border: 1px solid #00ff41;
+  font-size: 10px;
+  color: #00ff41;
+  pointer-events: auto;
+  z-index: 10;
+}
+#topmenu-hdr {
+  display: flex;
+  align-items: center;
+  padding: 7px 10px;
+  cursor: pointer;
+  user-select: none;
+  border-bottom: 1px solid #333;
+}
+#topmenu-hdr:hover { background: rgba(0,255,65,.08); }
+#topmenu-title {
+  color: #fff;
+  font-size: 11px;
+  letter-spacing: 1px;
+  flex: 1;
+}
+#topmenu-body { padding: 4px 8px 8px; }
+
+.sec-hdr {
+  display: block;
+  color: #aaffaa;
+  font-size: 10px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  padding: 5px 4px;
+  user-select: none;
+  list-style: none;
+  border-bottom: 1px solid #222;
+}
+.sec-hdr:hover { color: #fff; }
+.sec-body {
+  padding: 6px 4px 4px;
+  font-size: 10px;
+  color: #ccffcc;
+  line-height: 1.8;
+}
+details[open] .sec-hdr { color: #ffff00; }
+
+/* ── Bottom panel ── */
+#panel {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.93);
+  border-top: 1px solid #00ff41;
+  font-size: 10px;
+  color: #00ff41;
+  line-height: 1.7;
+  pointer-events: auto;
+}
+#panel-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  cursor: pointer;
+  pointer-events: auto;
+  user-select: none;
+}
+#panel-hdr:hover { background: rgba(0,255,65,.05); }
+#panel-hdr-left { display: flex; align-items: center; gap: 8px; }
+#panel-arrow { color: #00ff41; font-size: 10px; }
+#panel-content {
+  padding: 8px 12px 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  display: block;
+}
+#panel .pname  { color: #ffff00; font-size: 12px; font-weight: bold; }
+#panel .px     { color: #aaa; cursor: pointer; font-size: 14px; padding: 0 4px; pointer-events: auto; }
+#panel .px:hover { color: #fff; }
+#panel .pdesc  { color: #aabbaa; font-size: 9px; margin: 2px 0; }
+#panel .pstat  { color: #66ddff; }
+#panel .plog   { color: #aaa; font-size: 9px; }
+#panel .res-row { color: #aaffcc; font-size: 9px; }
+#panel .warn   { color: #ff6666; }
+#panel .good   { color: #44ff88; }
+#panel .mystery { color: #dd99ff; }
+
+/* ── Upgrade rows ── */
+.upg-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  gap: 4px;
+  margin: 5px 0;
+  font-size: 9px;
+  border-bottom: 1px solid #222;
+  padding-bottom: 5px;
+}
+.upg-row .uname { color: #ffff66; font-weight: bold; }
+.upg-row .ucost { color: #aaaaaa; }
+.upg-row .udesc { color: #aaa; font-size: 8px; grid-column: 1; }
+.upg-row .ubtn {
+  grid-column: 2; grid-row: 1/3; align-self: center;
+  background: rgba(0,255,65,.15);
+  border: 1px solid #00ff41;
+  color: #00ff41;
+  font-family: 'Courier New', monospace;
+  font-size: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+  pointer-events: auto;
+  white-space: nowrap;
+}
+.upg-row .ubtn:hover { background: rgba(0,255,65,.35); }
+.upg-row .udone { color: #777; }
+
+/* ── Crew rows ── */
+.crew-row    { font-size: 9px; margin: 2px 0; color: #ccffcc; }
+.crew-active { color: #44ff88; }
+.crew-cryo   { color: #66ddff; }
+.crew-dead   { color: #ff6666; text-decoration: line-through; }
+
+/* ── Time/setting buttons ── */
+.tbtn {
+  display: inline-block;
+  width: 46px; height: 22px;
+  background: rgba(0,0,0,0.85);
+  border: 1px solid #00ff41;
+  color: #00ff41;
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  cursor: pointer;
+  text-align: center;
+  line-height: 22px;
+  transition: background .15s;
+}
+.tbtn.active { background: #00ff41; color: #000; }
+
+/* ── Launch button ── */
+#launchbtn {
+  display: none;
+  background: rgba(0,255,65,.15);
+  border: 1px solid #00ff41;
+  color: #00ff41;
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  padding: 4px 10px;
+  cursor: pointer;
+  pointer-events: auto;
+  letter-spacing: 1px;
+}
+#launchbtn:hover { background: rgba(0,255,65,.3); }
+
+/* ── Transit overlay ── */
+#transit {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  background: rgba(0,0,0,0.95);
+  border: 1px solid #00ff41;
+  padding: 14px 18px;
+  text-align: center;
+  font-size: 10px;
+  color: #00ff41;
+  line-height: 2;
+  display: none;
+  min-width: 210px;
+  pointer-events: none;
+}
+#transit .dest { color: #ffff00; font-size: 13px; font-weight: bold; }
+.pbar {
+  width: 100%; height: 3px;
+  background: #222;
+  margin: 5px 0;
+  border: 1px solid #333;
+}
+.pfill { height: 100%; background: #00ff41; }
+
+/* ── Zoom label ── */
+#zlbl {
+  position: absolute;
+  top: 42px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,.8);
+  border: 1px solid #333;
+  padding: 3px 8px;
+  font-size: 8px;
+  color: #888;
+  pointer-events: none;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   LEVEL-UP MODAL
+   ═══════════════════════════════════════════════════════════ */
+
+#lvlup {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  background: rgba(0,0,0,.97);
+  border: 1px solid #ffff00;
+  padding: 18px 20px;
+  min-width: 280px; max-width: 360px;
+  font-size: 10px;
+  color: #ccffcc;
+  text-align: center;
+  display: none;
+  z-index: 100;
+  pointer-events: auto;
+}
+#lvlup .luhdr {
+  color: #ffff00;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+#lvlup .lusub { color: #aaa; font-size: 9px; margin-bottom: 14px; }
+.lu-card {
+  background: rgba(255,255,0,.04);
+  border: 1px solid #444;
+  padding: 10px 12px;
+  margin: 6px 0;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color .15s;
+}
+.lu-card:hover { border-color: #ffff00; background: rgba(255,255,0,.08); }
+.lu-card .lc-name { color: #ffff00; font-size: 11px; font-weight: bold; }
+.lu-card .lc-desc { color: #aaa; font-size: 9px; margin-top: 3px; }
+
+/* ═══════════════════════════════════════════════════════════
+   EARTH STATUS POPUP
+   ═══════════════════════════════════════════════════════════ */
+
+#earth-popup {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  background: #0a0a0a;
+  border: 2px solid #2255CC;
+  width: min(96vw, 560px);
+  height: min(90vh, 500px);
+  display: none;
+  z-index: 200;
+  pointer-events: auto;
+  box-shadow: 0 0 30px rgba(34,85,204,.2);
+  flex-direction: column;
+  overflow: hidden;
+}
+#ep-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid #1a2a4a;
+  background: #050510;
+  flex-shrink: 0;
+}
+#ep-title { color: #66ddff; font-size: 13px; font-weight: bold; letter-spacing: 2px; }
+#ep-close { color: #aaa; font-size: 20px; cursor: pointer; padding: 0 6px; line-height: 1; }
+#ep-close:hover { color: #fff; }
+#ep-body {
+  flex: 1;
+  padding: 12px 16px;
+  overflow-y: auto;
+  font-size: 9px;
+  color: #ccddee;
+  line-height: 1.7;
+}
+#ep-body .ep-section {
+  color: #66ddff;
+  font-size: 10px;
+  letter-spacing: 1px;
+  margin: 10px 0 5px;
+  border-bottom: 1px solid #112;
+  padding-bottom: 3px;
+}
+#ep-body .ep-section:first-child { margin-top: 0; }
+.ep-grid {
+  display: grid;
+  grid-template-columns: 45px 60px 60px 60px 60px;
+  gap: 1px 8px;
+  font-size: 8px;
+  margin: 4px 0;
+}
+.ep-grid .hdr { color: #556; font-size: 7px; letter-spacing: 1px; }
+.ep-net-pos { color: #44ff88; }
+.ep-net-neg { color: #ff6666; }
+.ep-source-row {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 4px 8px;
+  font-size: 8px;
+  margin: 2px 0;
+  padding: 2px 0;
+  border-bottom: 1px solid #111;
+}
+.ep-source-name { color: #aaffcc; }
+.ep-source-output { color: #888; }
+
+/* ═══════════════════════════════════════════════════════════
+   PLANET POPUP
+   ═══════════════════════════════════════════════════════════ */
+
+#planet-popup {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  background: #0a0a0a;
+  border: 2px solid #00ff41;
+  width: min(96vw, 580px);
+  height: min(90vh, 460px);
+  display: none;
+  z-index: 200;
+  pointer-events: auto;
+  box-shadow: 0 0 30px rgba(0,255,65,.15);
+  flex-direction: column;
+  overflow: hidden;
+}
+#pp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-bottom: 1px solid #1a3a1a;
+  background: #050f05;
+  flex-shrink: 0;
+}
+#pp-title { color: #ffff00; font-size: 13px; font-weight: bold; letter-spacing: 2px; }
+#pp-close { color: #aaa; font-size: 20px; cursor: pointer; padding: 0 6px; line-height: 1; }
+#pp-close:hover { color: #fff; }
+#pp-launch-btn {
+  background: rgba(0,255,65,.15);
+  border: 1px solid #00ff41;
+  color: #00ff41;
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+#pp-launch-btn:hover { background: rgba(0,255,65,.3); }
+
+#pp-body { display: flex; flex: 1; overflow: hidden; }
+
+/* Left column: info + scan chain + resources */
+#pp-right {
+  flex: 1;
+  padding: 10px 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+#pp-meta { font-size: 9px; line-height: 1.8; border-bottom: 1px solid #111; padding-bottom: 7px; color: #aaa; }
+#pp-meta b { color: #aaa; }
+
+/* Right column: building grid */
+#pp-left {
+  width: 52%;
+  border-left: 1px solid #1a3a1a;
+  padding: 10px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+#pp-grid-label { color: #666; font-size: 8px; letter-spacing: 2px; margin-bottom: 8px; }
+#pp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; flex: 1; }
+
+/* Scan chain steps */
+#pp-scan-chain { display: flex; flex-direction: column; gap: 3px; }
+.scan-step {
+  padding: 9px 12px;
+  border: 1px solid #1a2a1a;
+  font-size: 9px;
+  color: #2a2a2a;
+  line-height: 1.4;
+}
+.scan-step.done   { border-color: #1a3a1a; color: #44ff88; background: #030f03; }
+.scan-step.active  { border-color: #666600; color: #ffff00; cursor: pointer; background: rgba(255,255,0,.04); }
+.scan-step.active:hover { background: rgba(255,255,0,.1); }
+.scan-step.inprog  { border-color: #004466; color: #00ccff; }
+
+/* Resource bars */
+#pp-resources { display: flex; flex-direction: column; gap: 4px; border-top: 1px solid #111; padding-top: 8px; }
+.res-bar-row   { display: flex; align-items: center; gap: 6px; }
+.res-bar-label { width: 36px; color: #aaffaa; font-size: 9px; }
+.res-bar-track { flex: 1; height: 5px; background: #111; border: 1px solid #1a1a1a; }
+.res-bar-fill  { height: 100%; }
+.res-bar-amt   { width: 60px; color: #888; font-size: 8px; text-align: right; }
+
+/* Building grid squares */
+.build-sq {
+  border: 1px solid #111;
+  padding: 6px 3px;
+  text-align: center;
+  font-size: 8px;
+  cursor: default;
+  height: 70px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: #030303;
+}
+.build-sq.locked    { border-color: #111; color: #1e1e1e; }
+.build-sq.available { border-color: #00ff41; color: #aaffaa; cursor: pointer; }
+.build-sq.available:hover { background: #0a1a0a; border-color: #44ff88; }
+.build-sq.built     { border-color: #224422; color: #44ff88; background: #050f05; }
+.build-sq.building  { border-color: #00ccff; color: #00ccff; }
+.build-sq .sq-icon  { font-size: 16px; line-height: 1; margin-bottom: 3px; }
+.build-sq .sq-name  { font-size: 7px; letter-spacing: .3px; line-height: 1.4; }
+.build-sq .sq-cost  { font-size: 7px; color: #777; margin-top: 2px; }
+.build-sq.available .sq-cost { color: #aaa; }
+.build-sq .sq-prog  { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: #00ccff; }
+.build-sq .sq-lock  { font-size: 13px; color: #1a1a1a; margin-bottom: 3px; }
+
+/* ═══════════════════════════════════════════════════════════
+   WINDOW MANAGER
+   ═══════════════════════════════════════════════════════════ */
+
+.gw-root {
+  position: absolute;
+  background: rgba(0,0,0,0.94);
+  border: 1px solid #00ff41;
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  color: #00ff41;
+  pointer-events: auto;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+.gw-root.gw-focused { border-color: #44ff88; box-shadow: 0 2px 16px rgba(0,255,65,0.15); }
+.gw-root.gw-hidden { display: none !important; }
+.gw-root.gw-tab-merge-hover { border-color: #ffff00; box-shadow: 0 0 20px rgba(255,255,0,0.3); }
+
+.gw-titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 8px;
+  background: rgba(0,20,0,0.7);
+  border-bottom: 1px solid #1a3a1a;
+  cursor: grab;
+  user-select: none;
+  height: 22px;
+  flex-shrink: 0;
+}
+.gw-titlebar:active { cursor: grabbing; }
+
+.gw-title {
+  color: #aaffaa;
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.gw-root.gw-focused .gw-title { color: #fff; }
+
+.gw-controls { display: flex; gap: 8px; align-items: center; margin-left: 6px; }
+.gw-ctrl-btn {
+  cursor: pointer;
+  color: #555;
+  font-size: 10px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.gw-ctrl-btn:hover { color: #fff; }
+
+.gw-tab-bar {
+  display: flex;
+  background: rgba(0,10,0,0.6);
+  border-bottom: 1px solid #1a3a1a;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.gw-tab {
+  padding: 3px 10px;
+  font-size: 8px;
+  color: #555;
+  cursor: pointer;
+  border-right: 1px solid #0a1a0a;
+  white-space: nowrap;
+  user-select: none;
+  letter-spacing: 0.5px;
+}
+.gw-tab:hover { color: #aaa; background: rgba(0,255,65,0.03); }
+.gw-tab.gw-tab-active { color: #00ff41; background: rgba(0,255,65,0.08); border-bottom: 1px solid #00ff41; }
+
+.gw-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 8px;
+  line-height: 1.7;
+  max-height: 400px;
+}
+.gw-body::-webkit-scrollbar { width: 4px; }
+.gw-body::-webkit-scrollbar-track { background: #0a0a0a; }
+.gw-body::-webkit-scrollbar-thumb { background: #1a3a1a; }
+
+.gw-resize-handle {
+  position: absolute;
+  bottom: 0; right: 0;
+  width: 10px; height: 10px;
+  cursor: nwse-resize;
+  opacity: 0;
+}
+.gw-root:hover .gw-resize-handle { opacity: 1; }
+.gw-resize-handle::after {
+  content: '';
+  position: absolute;
+  bottom: 2px; right: 2px;
+  width: 6px; height: 6px;
+  border-right: 1px solid #333;
+  border-bottom: 1px solid #333;
+}
+
+/* Window content styles */
+.gw-body .pname  { color: #ffff00; font-size: 11px; font-weight: bold; }
+.gw-body .pdesc  { color: #aabbaa; font-size: 9px; margin: 2px 0; }
+.gw-body .pstat  { color: #66ddff; }
+.gw-body .plog   { color: #aaa; font-size: 9px; }
+.gw-body .res-row { color: #aaffcc; font-size: 9px; }
+.gw-body .warn   { color: #ff6666; }
+.gw-body .good   { color: #44ff88; }
+.gw-body .mystery { color: #dd99ff; }
+
+/* Alert items */
+.alert-item {
+  padding: 4px 6px;
+  margin: 2px 0;
+  border-left: 2px solid #444;
+  font-size: 8px;
+  line-height: 1.5;
+  color: #aaa;
+}
+.alert-item.alert-bad    { border-color: #ff4444; color: #ff8888; }
+.alert-item.alert-good   { border-color: #44ff88; color: #88ffaa; }
+.alert-item.alert-crisis { border-color: #ff8800; color: #ffaa44; }
+.alert-item.alert-mystery { border-color: #aa66ff; color: #cc99ff; }
+.alert-item.alert-earth  { border-color: #66ddff; color: #88eeff; }
+.alert-item .alert-time  { color: #444; font-size: 7px; }
+.alert-item .alert-response { color: #66ddff; font-size: 8px; margin-top: 2px; display: block; }
+
+/* Notification badge */
+.gw-badge {
+  background: #ff4444;
+  color: #000;
+  font-size: 7px;
+  font-weight: bold;
+  padding: 0 3px;
+  border-radius: 3px;
+  margin-left: 4px;
+  display: none;
+  line-height: 12px;
+}
+.gw-badge.visible { display: inline-block; }
+
+/* ═══════════════════════════════════════════════════════════
+   MOBILE OVERRIDES (Samsung Galaxy S24 / small screens)
+   ═══════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  /* Window Manager windows */
+  .gw-root {
+    min-width: 100vw;
+    left: 0 !important;
+  }
+
+  /* Title bar */
+  .gw-titlebar {
+    height: 36px;
+    padding: 6px 12px;
+  }
+
+  /* Title text */
+  .gw-title {
+    font-size: 12px;
+  }
+
+  /* Control buttons */
+  .gw-ctrl-btn {
+    font-size: 16px;
+    padding: 4px 8px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  /* Window body */
+  .gw-body {
+    font-size: 12px;
+    padding: 8px 12px;
+    max-height: 200px;
+  }
+
+  /* Buttons */
+  .ubtn, .tbtn {
+    font-size: 12px;
+    padding: 8px 14px;
+    min-height: 40px;
+  }
+
+  /* Scan steps */
+  .scan-step {
+    padding: 14px 16px;
+    font-size: 12px;
+    min-height: 44px;
+  }
+
+  /* Build grid */
+  .build-sq {
+    height: 80px;
+    font-size: 10px;
+  }
+
+  /* Resource text */
+  .rb-item { font-size: 11px; }
+  .rb-key, .rb-val { font-size: 10px; }
+  .crew-row { font-size: 12px; }
+
+  /* Upgrade rows */
+  .upg-row { font-size: 11px; }
+  .upg-row .uname { font-size: 11px; }
+  .upg-row .udesc { font-size: 10px; }
+
+  /* Alert items */
+  .alert-item {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+
+  /* Zoom label */
+  #zlbl {
+    font-size: 10px;
+    top: 8px;
+  }
+
+  /* Transit overlay */
+  #transit {
+    font-size: 14px;
+    padding: 20px 24px;
+    min-width: 260px;
+  }
+
+  /* Level-up modal */
+  #lvlup {
+    width: 90vw;
+    font-size: 12px;
+  }
+  .lu-card {
+    padding: 14px;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════
+     HTML STRUCTURE
+     ═══════════════════════════════════════════════════════════ -->
+
+<canvas id="c"></canvas>
+
+<div id="hud">
+
+  <!-- Window manager container — all windows rendered here by WM -->
+  <div id="wm-container"></div>
+
+  <!-- Transit overlay (stays as special overlay) -->
+  <div id="transit">
+    IN TRANSIT TO<br>
+    <div class="dest" id="tr-dest">&mdash;</div>
+    <div class="pbar"><div class="pfill" id="tr-prog" style="width:0%"></div></div>
+    <div id="tr-dist">&mdash;</div>
+    <div id="tr-etime">&mdash;</div>
+    <div id="tr-stime">&mdash;</div>
+    <div id="tr-gamma">&mdash;</div>
+  </div>
+
+  <div id="zlbl">SCROLL&middot;PINCH&middot;DRAG</div>
+
+  <!-- Level-up modal (stays as special overlay) -->
+  <div id="lvlup">
+    <div class="luhdr" id="lu-title">HUMANITY LEVEL UP</div>
+    <div class="lusub" id="lu-sub">Choose one advancement for civilization</div>
+    <div id="lu-cards"></div>
+  </div>
+
+</div><!-- end #hud -->
+
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  EARTH: JUST ONE MORE YEAR
+//  Single-player space survival sandbox
+// ═══════════════════════════════════════════════════════════════
+
+
+// ───────────────────────────────────────────────────────────────
+//  1. CONSTANTS & CONFIG
+// ───────────────────────────────────────────────────────────────
+
+const C_KMS  = 299792.458;    // speed of light (km/s)
+const AU_KM  = 149597870.7;   // 1 AU in km
+const SPD    = 86400;          // seconds per day
+const DPY    = 365.25;         // days per year
+
+const SETTINGS = {
+  labelMode: 'near',   // 'all' | 'near' | 'none'
+  orbits: true,
+};
+
+
+// ───────────────────────────────────────────────────────────────
+//  2. GAME STATE
+// ───────────────────────────────────────────────────────────────
+
+const G = {
+  earthDays: 0,
+  startYear: 2087,
+
+  // Ship
+  shipV: 0.10,
+  shipWorld: { x: 1, y: 0 },
+  currentBody: 'earth',
+  selectedBody: null,
+
+  // Travel
+  traveling: false,
+  travel: {
+    from: '', to: '',
+    earthDays: 0, shipDays: 0, gamma: 0,
+    distAU: 0, realDur: 8, prog: 0,
+  },
+
+  // Ship cargo (for MNPL and manual pickups)
+  res: { 'Fe': 150, 'Ni': 80, 'H\u2082O': 100, 'He-3': 10, 'S': 30, 'Pt': 5, 'MNPL': 47 },
+
+  // Earth economy — resource stockpile, demand, income tracking
+  earthRes: { 'Fe': 10, 'Ni': 5, 'H\u2082O': 8, 'He-3': 1, 'S': 3, 'Pt': 0.5 },
+  earthBaseGen: { 'Fe': 0.5, 'Ni': 0.2, 'H\u2082O': 0.3, 'He-3': 0.05, 'S': 0.1, 'Pt': 0.02 },
+  earthDemand: { 'Fe': 2, 'Ni': 0.8, 'H\u2082O': 1.5, 'He-3': 0.3, 'S': 0.5, 'Pt': 0.1 },
+  earthIncome: {}, // recalculated each tick for display
+  earthStab: 100,
+
+  // Progression
+  routes: new Set(),
+  planetUpgrades: {},
+  humanityLevel: 0,
+  humanityXP: 0,
+  humanityXPNext: 100,
+  humanityBonuses: {},
+  pendingLevelUp: false,
+
+  // Ship upgrades
+  cargoMult: 1,
+  hasScanner: false,
+  hasCryo: false,
+  hasShield: false,
+  upgrades: {
+    engine2: false, engine3: false,
+    cargo2: false, scanner: false,
+    cryo: false, shield: false,
+  },
+
+  // Per-body state (scan/probe/colony/buildings)
+  bodyStates: {},
+
+  // Event log
+  log: [
+    'Year 2087. Monopole crater confirmed \u2014 Tunguska Basin.',
+    'Monopole drive online. Sustained 0.10c achieved.',
+    'Mission: supply Earth. Keep her alive.',
+  ],
+  nextEvt: 250 + Math.random() * 300,
+
+  // Ship collecting state
+  collecting: false,
+  collectTimer: 0,
+  collectDuration: 0,
+  collectTarget: null, // body key
+
+  // UI state
+  timeScale: 1,
+  paused: false,
+  panelMode: null,
+  panelKey: null,
+  planetPopupKey: null,
+};
+
+const CREW = [
+  { name: 'Cdr. Chen Wei',   role: 'Commander', status: 'ACTIVE', daysCryo: 0 },
+  { name: 'Dr. A. Okafor',   role: 'Science',   status: 'ACTIVE', daysCryo: 0 },
+  { name: 'Eng. M. Vasquez', role: 'Engineer',   status: 'ACTIVE', daysCryo: 0 },
+];
+
+
+// ───────────────────────────────────────────────────────────────
+//  3. SOLAR SYSTEM DATA
+// ───────────────────────────────────────────────────────────────
+
+const BODIES = {
+  sun:     { name: 'Sol',           au: 0,      r: 9,   col: '#FFD700', period: 0,      ang: 0,   desc: 'Our star. G-type main sequence. Surface 5778K. He-3 in corona layer \u2014 theoretically harvestable but lethal proximity.', res: null, canMine: false },
+  mercury: { name: 'Mercury',       au: 0.387,  r: 2,   col: '#A09080', period: 0.241,  ang: 0.8, desc: 'Largest iron core proportionally of any planet. Polar craters hold permanent ice shadow. 88-day year.', res: { 'Fe': 40, 'S': 15, 'H\u2082O': 5 }, canMine: true, baseType: 'resource', baseName: 'Resource Base' },
+  venus:   { name: 'Venus',         au: 0.723,  r: 3,   col: '#E8C84A', period: 0.615,  ang: 2.1, desc: '465\u00B0C surface. 92 atm pressure. Dense CO\u2082 atmosphere rich in sulfur compounds. Skim-mining only \u2014 surface approach fatal.', res: { 'S': 55, 'Fe': 10 }, canMine: true, baseType: 'resource', baseName: 'Atmospheric Platform' },
+  earth:   { name: 'Earth',         au: 1.0,    r: 4,   col: '#2255CC', period: 1.0,    ang: 0,   desc: 'Home. Population ~12 billion. Stability declining. Every resource delivered buys time.', res: null, canMine: false },
+  mars:    { name: 'Mars',          au: 1.524,  r: 2.5, col: '#CC4400', period: 1.881,  ang: 1.3, desc: 'Iron oxide regolith. Confirmed subsurface ice lenses. Olympus Mons visible from orbit. Best early-game destination.', res: { 'Fe': 30, 'H\u2082O': 25 }, canMine: true, baseType: 'colony', baseName: 'Colony' },
+  belt:    { name: 'Asteroid Belt',  au: 2.77,   r: 1.5, col: '#777766', period: 4.6,    ang: 0.5, desc: 'M-type (nickel-iron) and C-type (carbonaceous, water ice) asteroids. Platinum-group metals in S-types. Primary early supply zone.', res: { 'Fe': 75, 'Ni': 65, 'H\u2082O': 35, 'Pt': 12 }, canMine: true, baseType: 'resource', baseName: 'Mining Station' },
+  jupiter: { name: 'Jupiter',       au: 5.203,  r: 7,   col: '#C88B3A', period: 11.86,  ang: 4.2, desc: 'Largest planet. He-3 in upper atmosphere \u2014 skim harvestable. Europa: confirmed liquid water ocean 100km deep.', res: { 'He-3': 18, 'H\u2082O': 50 }, canMine: true, baseType: 'station', baseName: 'Orbital Station' },
+  saturn:  { name: 'Saturn',        au: 9.537,  r: 6,   col: '#E8D5A3', period: 29.46,  ang: 1.8, desc: 'Ring system = 93% pure water ice, free-floating. Titan has nitrogen-methane atmosphere. Enceladus geysers: H\u2082O.', res: { 'H\u2082O': 90, 'He-3': 12 }, canMine: true, baseType: 'station', baseName: 'Orbital Station' },
+  uranus:  { name: 'Uranus',        au: 19.191, r: 4.5, col: '#7DE8E8', period: 84.01,  ang: 3.5, desc: 'Ice giant. 98\u00B0 axial tilt. Methane gives blue-green color. 27 moons including Miranda with massive cliff face.', res: { 'H\u2082O': 60, 'He-3': 8, 'Ni': 20 }, canMine: true, baseType: 'station', baseName: 'Orbital Station' },
+  neptune: { name: 'Neptune',       au: 30.069, r: 4,   col: '#4B70DD', period: 164.8,  ang: 5.2, desc: 'Supersonic winds 2100 km/h \u2014 fastest in the system. Triton orbits retrograde, likely a captured Kuiper object.', res: { 'H\u2082O': 50, 'He-3': 6, 'Ni': 15 }, canMine: true, baseType: 'station', baseName: 'Orbital Station' },
+};
+
+const NAMED_STARS = [
+  { name: 'Proxima Centauri',  au: 52,  ang: 0.45,  ly: 4.24,  type: 'Red dwarf M5.5Ve',   temp: '3042K', col: '#ff6644', r: 1.8, desc: 'Closest star to Sol. Has Proxima b \u2014 a confirmed rocky planet in the habitable zone.' },
+  { name: 'Alpha Centauri A',  au: 58,  ang: 0.55,  ly: 4.37,  type: 'Yellow dwarf G2V',    temp: '5790K', col: '#FFE090', r: 2.2, desc: 'Nearly identical twin to Sol. Part of a triple system. Primary long-range target.' },
+  { name: "Barnard's Star",    au: 44,  ang: 2.15,  ly: 5.96,  type: 'Red dwarf M4Ve',      temp: '3134K', col: '#ff5522', r: 1.6, desc: 'Second closest system. Fastest proper motion of any known star.' },
+  { name: 'Sirius A',          au: 68,  ang: 3.85,  ly: 8.60,  type: 'White-blue A1V',      temp: '9940K', col: '#ccddff', r: 2.4, desc: 'Brightest star in Earth\'s night sky. Binary with Sirius B, a white dwarf.' },
+  { name: 'Tau Ceti',          au: 60,  ang: 5.05,  ly: 11.9,  type: 'Yellow dwarf G8V',    temp: '5344K', col: '#FFD570', r: 1.9, desc: 'Most Sun-like star within 12 LY. Five confirmed planets. Two in habitable zone.' },
+  { name: 'Epsilon Eridani',   au: 48,  ang: 4.20,  ly: 10.5,  type: 'Orange dwarf K2V',    temp: '5084K', col: '#FF9955', r: 2.0, desc: 'Young star \u2014 only 440 million years old. Confirmed planet. Debris disk visible.' },
+];
+
+
+// ───────────────────────────────────────────────────────────────
+//  4. DATA TABLES
+// ───────────────────────────────────────────────────────────────
+
+// Ship upgrades
+const UPGRADES = [
+  { id: 'engine2', name: 'Engine Mk.II',       cost: { 'Fe': 100, 'Ni': 50 },              desc: '0.10c \u2192 0.25c. Dilation begins to matter.',    req: null },
+  { id: 'engine3', name: 'Engine Mk.III',      cost: { 'Fe': 200, 'Ni': 100, 'MNPL': 10 }, desc: '0.25c \u2192 0.50c. Significant time dilation.',     req: 'engine2' },
+  { id: 'cargo2',  name: 'Cargo Expansion',    cost: { 'Fe': 80 },                          desc: 'Double yield per mining run.',                      req: null },
+  { id: 'scanner', name: 'Deep Space Scanner', cost: { 'MNPL': 20 },                        desc: 'Preview events before they fire.',                  req: null },
+  { id: 'cryo',    name: 'Cryo System',        cost: { 'MNPL': 15, 'Fe': 60 },              desc: 'Crew survives 500+ year trips in stasis.',          req: null },
+  { id: 'shield',  name: 'Monopole Shield',    cost: { 'MNPL': 30 },                        desc: 'Halves negative event damage to Earth.',            req: null },
+];
+
+// Random events
+const EVTS = [
+  { text: 'Minor illness outbreak. Hospitals strained.',         delta: -3,  chance: .14, type: 'bad',     tag: 'illness' },
+  { text: 'Meteorite strike \u2014 Gobi Desert. Regional damage.', delta: -2,  chance: .12, type: 'bad',     tag: null },
+  { text: 'Solar flare. Grid disruption. Partial recovery.',     delta: -4,  chance: .10, type: 'bad',     tag: null },
+  { text: 'Freshwater conflict. Two nations. Escalating.',       delta: -9,  chance: .07, type: 'bad',     tag: 'water' },
+  { text: 'Crop failure. Two continents. Reserves critical.',    delta: -7,  chance: .07, type: 'bad',     tag: 'crops' },
+  { text: 'ASTEROID ALERT \u2014 impact window: 47 Earth years.',  delta: 0,   chance: .03, type: 'crisis',  tag: 'asteroid' },
+  { text: 'Fusion efficiency breakthrough. Power surplus.',      delta: 6,   chance: .10, type: 'good',    tag: null },
+  { text: 'Global summit. New trade agreements. Cohesion up.',   delta: 4,   chance: .09, type: 'good',    tag: null },
+  { text: 'Monopole lab operational. Research advancing.',       delta: 8,   chance: .06, type: 'good',    tag: null },
+  { text: 'Signal \u2014 55 Cancri e. Silicon-lithium pattern. Repeating.', delta: 0, chance: .04, type: 'mystery', tag: null },
+  { text: 'Aquifer collapse. Central Asia. Supply crisis.',      delta: -6,  chance: .06, type: 'bad',     tag: 'water' },
+  { text: 'Antibiotic resistance surge. Global health alert.',   delta: -5,  chance: .05, type: 'bad',     tag: 'illness' },
+];
+
+// Planet outpost upgrades
+const PLANET_UPGRADES = {
+  mercury: [
+    { id: 'mercury_drill',  name: 'Deep Core Drill',     cost: { 'Fe': 30, 'Ni': 15 },             desc: 'Fe yield +60%.', yieldBonus: { 'Fe': 0.6 } },
+    { id: 'mercury_ice',    name: 'Polar Ice Extractor',  cost: { 'Fe': 20, 'H\u2082O': 10 },       desc: 'Unlocks H\u2082O extraction from shadowed craters.', yieldBonus: { 'H\u2082O': 1.0 } },
+    { id: 'mercury_relay',  name: 'Comms Relay Station',  cost: { 'Fe': 25, 'MNPL': 5 },            desc: '+5 humanity XP per Earth year.', passive: 'xp5' },
+  ],
+  venus: [
+    { id: 'venus_skimmer',  name: 'Atmo Skim Platform',  cost: { 'Fe': 35, 'S': 20 },              desc: 'S yield +80%.', yieldBonus: { 'S': 0.8 } },
+    { id: 'venus_co2',      name: 'CO\u2082 Capture Array', cost: { 'Fe': 30, 'MNPL': 8 },          desc: '+6 stability per delivery.', bonus: 'stab6' },
+  ],
+  mars: [
+    { id: 'mars_colony',     name: 'Surface Colony',       cost: { 'Fe': 50, 'H\u2082O': 30 },      desc: 'All Mars yields +50%.', yieldBonus: { 'Fe': 0.5, 'H\u2082O': 0.5 } },
+    { id: 'mars_ice_drill',  name: 'Subsurface Ice Drill', cost: { 'Fe': 25, 'Ni': 10 },            desc: 'H\u2082O yield +100%.', yieldBonus: { 'H\u2082O': 1.0 } },
+    { id: 'mars_terraforge', name: 'Terraforming Seed',    cost: { 'H\u2082O': 60, 'MNPL': 10 },    desc: '+3 stability/yr passive.', passive: 'stab3' },
+  ],
+  belt: [
+    { id: 'belt_fleet',     name: 'Mining Fleet',         cost: { 'Fe': 60, 'Ni': 30 },             desc: 'All Belt yields +70%.', yieldBonus: { 'Fe': 0.7, 'Ni': 0.7, 'H\u2082O': 0.7, 'Pt': 0.7 } },
+    { id: 'belt_refinery',  name: 'Orbital Refinery',     cost: { 'Ni': 40, 'Fe': 30 },             desc: 'Pt yield +150%.', yieldBonus: { 'Pt': 1.5 } },
+    { id: 'belt_water',     name: 'C-Type Water Press',   cost: { 'Fe': 20 },                        desc: 'H\u2082O yield +80%.', yieldBonus: { 'H\u2082O': 0.8 } },
+  ],
+  jupiter: [
+    { id: 'jupiter_he3',    name: 'He-3 Skimmer Array',  cost: { 'Fe': 55, 'Ni': 25 },             desc: 'He-3 yield +120%.', yieldBonus: { 'He-3': 1.2 } },
+    { id: 'jupiter_europa', name: 'Europa Ocean Drill',   cost: { 'Fe': 40, 'H\u2082O': 20, 'MNPL': 8 }, desc: 'H\u2082O yield +200%.', yieldBonus: { 'H\u2082O': 2.0 } },
+    { id: 'jupiter_io',     name: 'Io Sulfur Station',    cost: { 'Fe': 30, 'S': 15 },              desc: 'Unlocks S yield from Io.', yieldBonus: { 'S': 0.9 } },
+  ],
+  saturn: [
+    { id: 'saturn_rings',     name: 'Ring Harvester Net',   cost: { 'Fe': 45, 'H\u2082O': 25 },     desc: 'H\u2082O yield +100%.', yieldBonus: { 'H\u2082O': 1.0 } },
+    { id: 'saturn_titan',     name: 'Titan Research Lab',   cost: { 'Fe': 50, 'MNPL': 10 },          desc: '+8 humanity XP/yr.', passive: 'xp8' },
+    { id: 'saturn_enceladus', name: 'Enceladus Geyser Tap', cost: { 'Ni': 20, 'Fe': 20 },           desc: 'H\u2082O yield +60%.', yieldBonus: { 'H\u2082O': 0.6 } },
+  ],
+  uranus: [
+    { id: 'uranus_core', name: 'Ice Core Sampler',     cost: { 'Fe': 40, 'Ni': 20 },             desc: 'H\u2082O and Ni yield +80%.', yieldBonus: { 'H\u2082O': 0.8, 'Ni': 0.8 } },
+    { id: 'uranus_mag',  name: 'Magnetic Study Array',  cost: { 'MNPL': 12, 'Fe': 25 },           desc: '+10 humanity XP on build.', bonus: 'xp10' },
+  ],
+  neptune: [
+    { id: 'neptune_probe',  name: 'Deep Probe Network', cost: { 'Fe': 50, 'Ni': 30 },             desc: 'All Neptune yields +90%.', yieldBonus: { 'H\u2082O': 0.9, 'He-3': 0.9, 'Ni': 0.9 } },
+    { id: 'neptune_triton', name: 'Triton Base',         cost: { 'Fe': 60, 'H\u2082O': 30, 'MNPL': 15 }, desc: '+15 humanity XP/yr. Interstellar gateway.', passive: 'xp15' },
+  ],
+};
+
+// Humanity civilization upgrades (pick 1 of 3 on level up)
+const HUMANITY_POOL = [
+  { id: 'hu_grid',       name: 'Global Power Grid',          desc: 'Earth passively recovers +2% stability per Earth year.',        effect: 'stab_regen' },
+  { id: 'hu_asteroid',   name: 'Asteroid Defense Network',   desc: 'Asteroid crisis events 60% less likely to fire.',               effect: 'ast_reduce' },
+  { id: 'hu_resilience', name: 'Population Resilience',      desc: 'All negative events deal 2 less stability damage.',             effect: 'neg_reduce' },
+  { id: 'hu_fusion',     name: 'Fusion Economy',             desc: 'He-3 deliveries worth double for stability gains.',             effect: 'he3_double' },
+  { id: 'hu_monopole',   name: 'Monopole Research Program',  desc: 'Earth crater slowly produces +2 MNPL per Earth year.',          effect: 'mnpl_regen' },
+  { id: 'hu_diplomacy',  name: 'Diplomatic Unity',           desc: 'Good events 40% more likely to fire.',                          effect: 'good_boost' },
+  { id: 'hu_food',       name: 'Synthetic Food Production',  desc: 'Crop failure events permanently disabled.',                     effect: 'no_crops' },
+  { id: 'hu_orbital',    name: 'Orbital Infrastructure',     desc: 'All travel times -15% (better launch windows).',                effect: 'travel_fast' },
+  { id: 'hu_medicine',   name: 'Genetic Medicine Corps',     desc: 'Illness outbreak events permanently disabled.',                 effect: 'no_illness' },
+  { id: 'hu_comms',      name: 'Deep Space Comms Array',     desc: 'See next incoming event 30 days before it fires.',              effect: 'preview_evt' },
+  { id: 'hu_rationing',  name: 'Resource Rationing Protocol', desc: 'Stability drain from events reduced by 25%.',                  effect: 'drain_reduce' },
+  { id: 'hu_elevator',   name: 'Space Elevator \u2014 Nairobi', desc: 'Cargo delivery bonus +30% stability on each return.',        effect: 'delivery_bonus' },
+  { id: 'hu_seismic',    name: 'Global Seismic Network',     desc: 'Earthquake and volcanic events disabled.',                      effect: 'no_seismic' },
+  { id: 'hu_ai',         name: 'Aligned AI Systems',         desc: 'Earth autonomously repairs 3% stability after each event.',     effect: 'auto_repair' },
+  { id: 'hu_water',      name: 'Global Water Reclamation',   desc: 'Aquifer and freshwater events permanently disabled.',           effect: 'no_water' },
+];
+
+// Building grid for planet outposts
+const BUILD_GRID = [
+  { id: 'solid_col',   name: 'Solid\nCollector',  icon: '\u26CF',  req: 'colony', type: 'solid',    cost: { 'Fe': 30, 'Ni': 10 },            desc: 'Extracts solids: Fe, Ni, Pt.' },
+  { id: 'gas_col',     name: 'Gas\nCollector',    icon: '\uD83C\uDF00',  req: 'colony', type: 'gas',      cost: { 'Fe': 25, 'MNPL': 3 },           desc: 'Extracts atmosphere: He-3, S.' },
+  { id: 'liquid_col',  name: 'Liquid\nCollector',  icon: '\uD83D\uDCA7',  req: 'colony', type: 'liquid',   cost: { 'Fe': 20, 'Ni': 15 },            desc: 'Extracts liquids: H\u2082O.' },
+  { id: 'shield',      name: 'Shield\nArray',      icon: '\uD83D\uDEE1',  req: 'colony', type: 'shield',   cost: { 'Fe': 40, 'MNPL': 10 },          desc: 'Protects outpost. Halves damage.' },
+  { id: 'deep_scan',   name: 'Deep\nScanner',      icon: '\uD83D\uDCE1',  req: 'probe',  type: 'scanner',  cost: { 'Fe': 30, 'MNPL': 5 },           desc: 'Reveals hidden resources. +XP.' },
+  { id: 'power_relay', name: 'Power\nRelay',       icon: '\u26A1',  req: 'probe',  type: 'power',    cost: { 'Fe': 20 },                       desc: 'Powers all buildings.' },
+  { id: 'refinery',    name: 'Ore\nRefinery',      icon: '\uD83C\uDFED',  req: 'colony', type: 'refinery', cost: { 'Fe': 50, 'Ni': 20 },            desc: 'Refines ore. 2x value.' },
+  { id: 'colony_hub',  name: 'Colony\nHub',        icon: '\uD83C\uDFDB',  req: 'colony', type: 'hub',      cost: { 'Fe': 80, 'H\u2082O': 40, 'Ni': 30 }, desc: 'Permanent settlement.' },
+  { id: 'shipyard',    name: 'Ship\nyard',         icon: '\uD83D\uDE80',  req: 'colony_hub', type: 'shipyard', cost: { 'Fe': 100, 'Ni': 60, 'MNPL': 20 }, desc: 'Builds ships. Enables trade routes.' },
+];
+
+// Asteroids
+const ASTEROIDS = [];
+const AST_NAMES = [
+  'Barringer', 'Vesta Fragment', 'Ryugu-B', 'Itokawa 2', '2087 RX14',
+  'Bennu Shadow', 'Eros-C', 'Pallas Shard', 'Hygiea Fragment', 'Apophis Return',
+];
+let nextAstSpawn = 180;
+
+
+// ───────────────────────────────────────────────────────────────
+//  5. CANVAS & CAMERA
+// ───────────────────────────────────────────────────────────────
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+
+const CAM = { x: 0, y: 0, zoom: 50, min: 4, max: 800 };
+
+function w2s(wx, wy) {
+  return { x: wx * CAM.zoom + CAM.x, y: wy * CAM.zoom + CAM.y };
+}
+
+function s2w(sx, sy) {
+  return { x: (sx - CAM.x) / CAM.zoom, y: (sy - CAM.y) / CAM.zoom };
+}
+
+function zoomAt(sx, sy, f) {
+  const b = s2w(sx, sy);
+  CAM.zoom = Math.max(CAM.min, Math.min(CAM.max, CAM.zoom * f));
+  const a = s2w(sx, sy);
+  CAM.x += (a.x - b.x) * CAM.zoom;
+  CAM.y += (a.y - b.y) * CAM.zoom;
+}
+
+function resetCamera() {
+  CAM.x = canvas.width / 2;
+  CAM.y = canvas.height / 2;
+  CAM.zoom = Math.min(canvas.width, canvas.height) * 0.42 / 30.069;
+}
+
+
+// ───────────────────────────────────────────────────────────────
+//  6. UTILITY FUNCTIONS
+// ───────────────────────────────────────────────────────────────
+
+function lorentz(v) {
+  return 1 / Math.sqrt(1 - v * v);
+}
+
+function calcTravel(au, v) {
+  const speedMult = G.humanityBonuses['hu_orbital'] ? 0.85 : 1.0;
+  const ed = (au * AU_KM) / (v * C_KMS * SPD) * speedMult;
+  const g = lorentz(v);
+  return { earthDays: ed, shipDays: ed / g, gamma: g };
+}
+
+function fmtT(d) {
+  if (d < 1) return (d * 24).toFixed(1) + 'h';
+  if (d < 365) return d.toFixed(1) + 'd';
+  return (d / DPY).toFixed(2) + 'yr';
+}
+
+function bw(key) {
+  const b = BODIES[key];
+  if (b.au === 0) return { x: 0, y: 0 };
+  return { x: b.au * Math.cos(b.ang), y: b.au * Math.sin(b.ang) };
+}
+
+function auDist(a, b) {
+  const pa = bw(a), pb = bw(b);
+  return Math.hypot(pa.x - pb.x, pa.y - pb.y);
+}
+
+const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+
+function earthDate() {
+  const t = G.earthDays / DPY;
+  return MONTHS[Math.floor((t % 1) * 12)] + ' ' + Math.floor(G.startYear + t);
+}
+
+
+// ───────────────────────────────────────────────────────────────
+//  7. BODY STATE MANAGEMENT
+// ───────────────────────────────────────────────────────────────
+
+function getBodyState(key) {
+  if (!G.bodyStates[key]) {
+    G.bodyStates[key] = {
+      scan: 'none',       scanTimer: 0,          // none -> scanning -> done
+      collect: 'none',    collectTimer: 0,        // none -> collecting -> pick -> none (repeatable)
+      collectResOptions: null,                    // [{r, amt}] during pick phase
+      colony: 'none',     colonyTimer: 0,         // none -> traveling -> done
+      buildings: {},
+      buildTimers: {},
+      knownRes: null,
+    };
+  }
+  return G.bodyStates[key];
+}
+
+function lightDelay(key) {
+  return BODIES[key].au * AU_KM / (C_KMS * SPD);
+}
+
+function travelDays(key) {
+  return calcTravel(BODIES[key].au, G.shipV).earthDays;
+}
+
+
+// ───────────────────────────────────────────────────────────────
+//  8. SCAN / COURIER / COLONY PIPELINE
+// ───────────────────────────────────────────────────────────────
+
+function startScan(key) {
+  const st = getBodyState(key);
+  if (st.scan !== 'none') return;
+  if (G.currentBody !== key) {
+    addLog('\u26A0 Must be on ' + BODIES[key].name + ' to scan.');
+    return;
+  }
+  // FIX: Set to 'scanning' with a timer instead of instant 'done'
+  const delay = lightDelay(key) * 2;
+  st.scan = 'scanning';
+  st.scanTimer = Math.max(delay, 1); // minimum 1 day
+  spawnDot(key, 'earth', 'scan', delay, null);
+  addLog('Scanning ' + BODIES[key].name + '... ETA: ' + fmtT(st.scanTimer));
+  renderPlanetPopup();
+}
+
+// --- SHIP COLLECT (timed like scan — 15-20 game days, then choose 1 resource) ---
+function startCollect(key) {
+  const st = getBodyState(key);
+  if (st.collect !== 'none') return;
+  if (G.traveling) return;
+  if (G.currentBody !== key) return;
+  const b = BODIES[key];
+  if (!b || !b.res) return;
+  if (st.scan !== 'done') { addLog('\u26A0 Must scan before collecting.'); return; }
+  const delay = lightDelay(key) * 2;
+  st.collect = 'collecting';
+  st.collectTimer = Math.max(delay, 1);
+  addLog('Collecting on ' + b.name + '\u2026 ETA: ' + fmtT(st.collectTimer));
+  renderPlanetPopup();
+}
+
+function pickResource(key, r, amt) {
+  const st = getBodyState(key);
+  if (st.collect !== 'pick') return;
+  G.res[r] = (G.res[r] || 0) + amt;
+  st.collect = 'loaded';
+  st.collectResOptions = null;
+  addLog('\u2713 Loaded: ' + amt + 't ' + r + ' \u2014 return to Earth to deliver.');
+  renderPlanetPopup();
+}
+
+function updateCollecting(dtDays) {
+  // Collect timers are now handled inside updateBodyStates
+}
+
+// --- ESTABLISH BASE ---
+const BASE_COSTS = {
+  colony:   { 'Fe': 80, 'H\u2082O': 40, 'Ni': 20 },
+  resource: { 'Fe': 60, 'Ni': 30 },
+  station:  { 'Fe': 100, 'Ni': 50, 'MNPL': 10 },
+};
+
+function establishBase(key) {
+  const st = getBodyState(key);
+  const b = BODIES[key];
+  if (st.colony !== 'none') return;
+  if (G.currentBody !== key) {
+    addLog('\u26A0 Must be at ' + b.name + ' to establish base.');
+    return;
+  }
+  if (st.scan !== 'done') { addLog('\u26A0 Must scan first.'); return; }
+  const cost = BASE_COSTS[b.baseType] || BASE_COSTS.resource;
+  if (!Object.entries(cost).every(([k, v]) => (G.res[k] || 0) >= v)) {
+    const needed = Object.entries(cost).map(([k, v]) => v + ' ' + k).join(', ');
+    addLog('\u26A0 ' + b.baseName + ' needs: ' + needed);
+    return;
+  }
+  Object.entries(cost).forEach(([k, v]) => { G.res[k] -= v; });
+  st.colony = 'building';
+  st.colonyTimer = Math.max(lightDelay(key) * 2, 1);
+  addLog('Constructing ' + b.baseName + ' on ' + b.name + '\u2026 ETA: ' + fmtT(st.colonyTimer));
+  renderPlanetPopup();
+}
+
+function buildStructure(key, uid) {
+  const st = getBodyState(key);
+  const u = BUILD_GRID.find(x => x.id === uid);
+  if (!u || st.buildings[uid] === 'built' || st.buildings[uid] === 'building') return;
+  if (!Object.entries(u.cost).every(([k, v]) => (G.res[k] || 0) >= v)) {
+    addLog('\u26A0 Insufficient resources for ' + u.name.replace('\n', ' '));
+    return;
+  }
+  Object.entries(u.cost).forEach(([k, v]) => { G.res[k] -= v; });
+  st.buildings[uid] = 'building';
+  st.buildTimers[uid] = 0;
+  addLog('Building ' + u.name.replace('\n', ' ') + ' on ' + BODIES[key].name + '\u2026');
+  renderPlanetPopup();
+}
+
+function updateBodyStates(dtDays) {
+  Object.entries(G.bodyStates).forEach(([key, st]) => {
+    // Scan timer
+    if (st.scan === 'scanning') {
+      st.scanTimer -= dtDays;
+      if (st.scanTimer <= 0) {
+        st.scan = 'done';
+        addLog('\u2713 ' + BODIES[key].name + ' scan complete.');
+        if (G.planetPopupKey === key) renderPlanetPopup();
+      }
+    }
+
+    // Collect timer
+    if (st.collect === 'collecting') {
+      st.collectTimer -= dtDays;
+      if (st.collectTimer <= 0) {
+        // Roll resource amounts for each detected resource, store for player to choose
+        const b = BODIES[key];
+        const pups = (PLANET_UPGRADES[key] || []).filter(u => G.planetUpgrades[u.id] && u.yieldBonus);
+        st.collectResOptions = Object.entries(b.res).map(([r, max]) => {
+          let bonus = 0;
+          pups.forEach(u => { if (u.yieldBonus[r]) bonus += u.yieldBonus[r]; });
+          const amt = Math.floor(max * G.cargoMult * (0.08 + Math.random() * 0.07) * (1 + bonus));
+          return { r, amt };
+        }).filter(x => x.amt > 0);
+        st.collect = 'pick';
+        addLog('\u2713 ' + BODIES[key].name + ': collection complete. Choose resource to load.');
+        if (G.planetPopupKey === key) renderPlanetPopup();
+      }
+    }
+
+    // Colony/base build timer
+    if (st.colony === 'traveling' || st.colony === 'building') {
+      st.colonyTimer -= dtDays;
+      if (st.colonyTimer <= 0) {
+        st.colony = 'done';
+        G.routes.add(key);
+        awardXP(20);
+        const bName = BODIES[key].baseName || 'Base';
+        addLog('\u2713 ' + bName + ' established on ' + BODIES[key].name + '!');
+        if (G.planetPopupKey === key) renderPlanetPopup();
+      }
+    }
+
+    // Building timers
+    Object.keys(st.buildings).forEach(uid => {
+      if (st.buildings[uid] === 'building') {
+        st.buildTimers[uid] = (st.buildTimers[uid] || 0) + dtDays * (100 / 30);
+        if (st.buildTimers[uid] >= 100) {
+          st.buildings[uid] = 'built';
+          const u = BUILD_GRID.find(x => x.id === uid);
+          addLog('\u2713 ' + (u ? u.name.replace('\n', ' ') : uid) + ' completed on ' + BODIES[key].name + '.');
+          if (u && (u.type === 'solid' || u.type === 'gas' || u.type === 'liquid')) {
+            spawnDot(key, 'earth', 'transport', travelDays(key), null, true);
+          }
+          if (G.planetPopupKey === key) renderPlanetPopup();
+        }
+      }
+    });
+  });
+}
+
+
+// ───────────────────────────────────────────────────────────────
+//  9. TRAVEL DOTS (visual indicators for scan/courier/colony/transport)
+// ───────────────────────────────────────────────────────────────
+
+const TDOTS = [];
+
+function spawnDot(fromKey, toKey, type, totalDays, onArrive, loop = false) {
+  const fw = bw(fromKey);
+  const tw = bw(toKey);
+  TDOTS.push({
+    fromKey, toKey, type,
+    fx: fw.x, fy: fw.y,
+    tx: tw.x, ty: tw.y,
+    prog: 0, totalDays, elapsed: 0,
+    loop, loopDir: 1,
+    onArrive,
+  });
+}
+
+function updateTravelDots(dtDays) {
+  for (let i = TDOTS.length - 1; i >= 0; i--) {
+    const d = TDOTS[i];
+    d.elapsed += dtDays;
+    d.prog = Math.min(1, d.elapsed / d.totalDays);
+
+    // Keep positions current as bodies orbit
+    if (d.loopDir === 1) {
+      const fw = bw(d.fromKey), tw = bw(d.toKey);
+      d.fx = fw.x; d.fy = fw.y; d.tx = tw.x; d.ty = tw.y;
+    } else {
+      const fw = bw(d.toKey), tw = bw(d.fromKey);
+      d.fx = fw.x; d.fy = fw.y; d.tx = tw.x; d.ty = tw.y;
+    }
+
+    if (d.prog >= 1) {
+      if (d.onArrive) d.onArrive();
+      if (d.loop) {
+        d.loopDir *= -1;
+        d.elapsed = 0;
+        d.prog = 0;
+        d.totalDays = calcTravel(
+          Math.hypot(bw(d.fromKey).x - bw(d.toKey).x, bw(d.fromKey).y - bw(d.toKey).y),
+          G.shipV
+        ).earthDays;
+      } else {
+        TDOTS.splice(i, 1);
+      }
+    }
+  }
+}
+
+function dotColor(type, alpha) {
+  switch (type) {
+    case 'scan':      return 'rgba(200,200,200,' + (alpha * 0.6) + ')';
+    case 'courier':   return 'rgba(255,255,200,' + alpha + ')';
+    case 'colony':    return 'rgba(100,200,255,' + alpha + ')';
+    case 'transport': return 'rgba(100,255,150,' + (alpha * 0.8) + ')';
+    default:          return 'rgba(255,255,255,' + alpha + ')';
+  }
+}
+
+function drawTravelDots() {
+  TDOTS.forEach(d => {
+    const sx = d.fx + (d.tx - d.fx) * d.prog;
+    const sy = d.fy + (d.ty - d.fy) * d.prog;
+    const p = w2s(sx, sy);
+    if (p.x < -4 || p.x > canvas.width + 4 || p.y < -4 || p.y > canvas.height + 4) return;
+
+    // Trail
+    for (let t = 1; t <= 4; t++) {
+      const tp = Math.max(0, d.prog - t * 0.018);
+      const tsx = d.fx + (d.tx - d.fx) * tp;
+      const tsy = d.fy + (d.ty - d.fy) * tp;
+      const tp2 = w2s(tsx, tsy);
+      const alpha = (5 - t) / 24;
+      ctx.fillStyle = dotColor(d.type, alpha);
+      ctx.fillRect(~~tp2.x, ~~tp2.y, 1, 1);
+    }
+
+    // Dot
+    ctx.fillStyle = dotColor(d.type, 1);
+    ctx.fillRect(~~p.x, ~~p.y, 1, 1);
+  });
+}
+
+
+// ───────────────────────────────────────────────────────────────
+//  10a. EARTH STATUS POPUP
+// ───────────────────────────────────────────────────────────────
+
+function openEarthPopup() {
+  WM.show('earth-status');
+}
+
+function closeEarthPopup() {
+  // No-op now, earth-status is always a window
+}
+
+function renderEarthPopup(body) {
+  if (!body) { const w = WM.windows.get('earth-status'); if (w) body = w.bodyEl; }
+  if (!body) return;
+  const RES_KEYS = ['Fe', 'Ni', 'H\u2082O', 'He-3', 'S', 'Pt'];
+
+  let html = '';
+
+  // --- Overview ---
+  const stabCol = G.earthStab > 60 ? '#44ff88' : G.earthStab > 30 ? '#ffff00' : '#ff6666';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">' +
+    '<span style="color:#aaa;font-size:10px;">Population ~12 billion &nbsp;|&nbsp; ' + earthDate() + '</span>' +
+    '<span style="color:' + stabCol + ';font-size:12px;font-weight:bold;">STABILITY: ' + G.earthStab.toFixed(1) + '%</span></div>';
+
+  // Stability bar
+  html += '<div style="width:100%;height:6px;background:#111;border:1px solid #222;margin-bottom:10px;">' +
+    '<div style="width:' + G.earthStab + '%;height:100%;background:' + stabCol + ';transition:width .4s;"></div></div>';
+
+  // --- Resource Table ---
+  html += '<div class="ep-section">RESOURCE STOCKPILE</div>';
+  html += '<div class="ep-grid">';
+  html += '<span class="hdr">RES</span><span class="hdr">STOCK</span><span class="hdr">INCOME/YR</span><span class="hdr">DEMAND/YR</span><span class="hdr">NET/YR</span>';
+  RES_KEYS.forEach(k => {
+    const stock = G.earthRes[k] || 0;
+    const inc = G.earthIncome[k] || 0;
+    const dem = G.earthDemand[k] || 0;
+    const net = inc - dem;
+    const stockCol = stock < dem ? '#ff6666' : stock < dem * 3 ? '#ffff00' : '#aaffcc';
+    html += '<span style="color:' + stockCol + ';font-weight:bold;">' + k + '</span>' +
+      '<span style="color:#ccc">' + stock.toFixed(1) + '</span>' +
+      '<span style="color:#66ddff">+' + inc.toFixed(2) + '</span>' +
+      '<span style="color:#ff8866">-' + dem.toFixed(2) + '</span>' +
+      '<span class="' + (net >= 0 ? 'ep-net-pos' : 'ep-net-neg') + '">' + (net >= 0 ? '+' : '') + net.toFixed(2) + '</span>';
+  });
+  html += '</div>';
+
+  // MNPL
+  html += '<div style="margin:6px 0;padding:4px 0;border-top:1px solid #111;">' +
+    '<span style="color:#dd99ff;font-weight:bold;">MNPL: ' + Math.floor(G.res['MNPL']) + '</span>' +
+    (G.humanityBonuses['hu_monopole'] ? ' <span style="color:#888">(+2/yr from research)</span>' : ' <span style="color:#333">(finite — crater supply only)</span>') +
+    '</div>';
+
+  // --- Income Sources ---
+  html += '<div class="ep-section">INCOME SOURCES</div>';
+
+  // Earth base generation
+  html += '<div class="ep-source-row"><span class="ep-source-name" style="color:#66ddff;">\u2302 Earth (monopole infra)</span>' +
+    '<span class="ep-source-output">' + RES_KEYS.map(k => {
+      const v = G.earthBaseGen[k] || 0;
+      return v > 0 ? k + ':+' + v.toFixed(2) : '';
+    }).filter(Boolean).join('  ') + '</span></div>';
+
+  // Colony sources
+  let hasColonySources = false;
+  Object.entries(G.bodyStates).forEach(([bodyKey, st]) => {
+    if (st.colony !== 'done') return;
+    const b = BODIES[bodyKey];
+    if (!b || !b.res) return;
+
+    const hasSolid = (st.buildings['solid_col'] === 'built');
+    const hasGas = (st.buildings['gas_col'] === 'built');
+    const hasLiquid = (st.buildings['liquid_col'] === 'built');
+    if (!hasSolid && !hasGas && !hasLiquid) return;
+
+    const pups = (PLANET_UPGRADES[bodyKey] || []).filter(u => G.planetUpgrades[u.id] && u.yieldBonus);
+    const outputs = [];
+    Object.entries(b.res).forEach(([r, baseYield]) => {
+      let collected = false;
+      if ((r === 'Fe' || r === 'Ni' || r === 'Pt') && hasSolid) collected = true;
+      if ((r === 'He-3' || r === 'S') && hasGas) collected = true;
+      if (r === 'H\u2082O' && hasLiquid) collected = true;
+      if (!collected) return;
+      let rate = baseYield * 0.02;
+      pups.forEach(u => { if (u.yieldBonus[r]) rate *= (1 + u.yieldBonus[r]); });
+      outputs.push(r + ':+' + rate.toFixed(2));
+    });
+
+    if (outputs.length) {
+      hasColonySources = true;
+      const collectors = [hasSolid ? '\u26CF' : '', hasGas ? '\uD83C\uDF00' : '', hasLiquid ? '\uD83D\uDCA7' : ''].filter(Boolean).join('');
+      html += '<div class="ep-source-row"><span class="ep-source-name">' + b.name + ' ' + collectors + '</span>' +
+        '<span class="ep-source-output">' + outputs.join('  ') + '</span></div>';
+    }
+  });
+
+  if (!hasColonySources) {
+    html += '<div style="color:#333;font-size:8px;padding:4px 0;">No colony collectors active. Build collectors on colonized planets to supply Earth.</div>';
+  }
+
+  // --- Demand Breakdown ---
+  html += '<div class="ep-section">DEMAND (annual consumption)</div>';
+  html += '<div style="font-size:8px;color:#aaa;margin:2px 0;">';
+  RES_KEYS.forEach(k => {
+    const dem = G.earthDemand[k] || 0;
+    html += '<span style="color:#ff8866;margin-right:10px;">' + k + ': ' + dem.toFixed(2) + '/yr</span>';
+  });
+  html += '</div>';
+  html += '<div style="font-size:8px;color:#666;margin-top:4px;">Demand represents what 12 billion people consume annually. Shortfalls cause stability decay.</div>';
+
+  // --- Active Bonuses ---
+  const activeBonuses = HUMANITY_POOL.filter(u => G.humanityBonuses[u.id]);
+  if (activeBonuses.length > 0) {
+    html += '<div class="ep-section">ACTIVE HUMANITY BONUSES</div>';
+    activeBonuses.forEach(u => {
+      html += '<div style="font-size:8px;margin:2px 0;"><span style="color:#ffff66;">' + u.name + '</span> <span style="color:#777;">\u2014 ' + u.desc + '</span></div>';
+    });
+  }
+
+  // --- Planet Upgrades ---
+  const activeUpgrades = Object.keys(G.planetUpgrades).filter(k => G.planetUpgrades[k]);
+  if (activeUpgrades.length > 0) {
+    html += '<div class="ep-section">COLONY UPGRADES</div>';
+    Object.entries(PLANET_UPGRADES).forEach(([bodyKey, pups]) => {
+      const built = pups.filter(u => G.planetUpgrades[u.id]);
+      if (built.length === 0) return;
+      html += '<div style="font-size:8px;margin:2px 0;"><span style="color:#aaffcc;">' + BODIES[bodyKey].name + ':</span> ';
+      html += built.map(u => '<span style="color:#aaa;">' + u.name + '</span>').join(', ');
+      html += '</div>';
+    });
+  }
+
+  // --- Earth Upgrades ---
+  html += '<div class="ep-section">EARTH UPGRADES</div>';
+  UPGRADES.forEach(u => {
+    const done = G.upgrades[u.id];
+    const req = u.req ? G.upgrades[u.req] : true;
+    const costStr = Object.entries(u.cost).map(([k, v]) => v + ' ' + k).join(', ');
+    const canAfford = !done && req && Object.entries(u.cost).every(([k, v]) => (G.res[k] || 0) >= v);
+    if (done) {
+      html += '<div style="font-size:8px;margin:2px 0;color:#777;">\u2713 ' + u.name + ' <span style="color:#333;">\u2014 ' + u.desc + '</span></div>';
+    } else {
+      html += '<div style="font-size:8px;margin:3px 0;display:flex;justify-content:space-between;align-items:center;">' +
+        '<span><span style="color:#ffff66;">' + u.name + '</span> <span style="color:#666;">\u2014 ' + u.desc + '</span><br><span style="color:#888;font-size:7px;">' + costStr + '</span></span>' +
+        '<button class="ubtn" onclick="buyUpgrade(\'' + u.id + '\')"' +
+        (canAfford ? '' : ' disabled style="opacity:.3;cursor:not-allowed"') + '>INSTALL</button></div>';
+    }
+  });
+
+  body.innerHTML = html;
+}
+
+// Keep Earth popup live-updated
+setInterval(() => {
+  const w = WM.windows.get('earth-status');
+  if (w && w.visible && !w.collapsed) renderEarthPopup(w.bodyEl);
+}, 1000);
+
+// Planet popup updates are triggered by game state changes only
+
+
+// ───────────────────────────────────────────────────────────────
+//  10b. PLANET POPUP
+// ───────────────────────────────────────────────────────────────
+
+function openPlanetPopup(key) {
+  if (key === 'sun' || key === 'earth') return;
+  G.planetPopupKey = key;
+  const w = WM.windows.get('planet-info');
+  if (w) {
+    w.titleEl.textContent = BODIES[key].name.toUpperCase();
+    WM.show('planet-info');
+    renderPlanetPopup();
+  }
+}
+
+function closePlanetPopup() {
+  WM.hide('planet-info');
+  G.planetPopupKey = null;
+}
+
+function renderPlanetPopup() {
+  const key = G.planetPopupKey;
+  if (!key) return;
+  const b = BODIES[key];
+  const st = getBodyState(key);
+  const onPlanet = (G.currentBody === key);
+  const scanDone = (st.scan === 'done');
+  const baseEst = (st.colony === 'done');
+
+  const w = WM.windows.get('planet-info');
+  if (!w) return;
+  const body = w.bodyEl;
+
+  const dist = auDist(G.currentBody, key);
+  const { earthDays, shipDays } = calcTravel(dist, G.shipV);
+
+  let html = '';
+
+  // HEADER
+  html += '<div style="margin-bottom:8px;">';
+  if (onPlanet) {
+    html += '<div style="display:inline-block;background:rgba(0,255,65,.15);border:1px solid #00ff41;padding:2px 8px;font-size:8px;color:#44ff88;letter-spacing:1px;margin-bottom:6px;">IN ORBIT</div>';
+  } else if (G.routes.has(key)) {
+    html += '<div style="display:inline-block;background:rgba(0,255,65,.08);border:1px solid #1a3a1a;padding:2px 8px;font-size:8px;color:#44ff88;letter-spacing:1px;margin-bottom:6px;">SUPPLY ROUTE ACTIVE</div>';
+  } else if (scanDone) {
+    html += '<div style="display:inline-block;background:rgba(255,255,0,.08);border:1px solid #333300;padding:2px 8px;font-size:8px;color:#aaaa44;letter-spacing:1px;margin-bottom:6px;">SURVEYED</div>';
+  }
+  html += '<div style="font-size:9px;color:#888;line-height:1.6;margin-bottom:4px;">' + b.desc + '</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 12px;font-size:9px;color:#aaa;margin-bottom:4px;">';
+  html += '<div>Distance: <span style="color:#fff;">' + b.au.toFixed(3) + ' AU</span></div>';
+  html += '<div>Travel: <span style="color:#fff;">' + fmtT(earthDays) + '</span> Earth</div>';
+  html += '<div>Type: <span style="color:#ffff66;">' + (b.baseName || 'N/A') + '</span></div>';
+  html += '<div>Ship time: <span style="color:#fff;">' + fmtT(shipDays) + '</span></div>';
+  html += '</div>';
+  if (!onPlanet && !G.traveling) {
+    html += '<button class="ubtn" data-action="launch" style="padding:8px 14px;font-size:11px;margin-top:4px;">\u25B6 LAUNCH TO ' + b.name.toUpperCase() + '</button>';
+  }
+  html += '</div>';
+
+  // STRATEGIC VALUE
+  if (b.res) {
+    html += '<div style="border-top:1px solid #111;padding-top:6px;margin-bottom:6px;">';
+    html += '<div style="color:#66ddff;font-size:9px;letter-spacing:1px;margin-bottom:4px;">STRATEGIC VALUE</div>';
+    const totalYield = Object.values(b.res).reduce((s, v) => s + v, 0);
+    const valueRating = totalYield > 120 ? 'HIGH' : totalYield > 50 ? 'MODERATE' : 'LOW';
+    const valueCol = totalYield > 120 ? '#44ff88' : totalYield > 50 ? '#ffff00' : '#ff8844';
+    const RK = ['Fe', 'Ni', 'H\u2082O', 'He-3', 'S', 'Pt'];
+    const deficits = RK.map(k => ({ r: k, deficit: (G.earthDemand[k]||0) - (G.earthIncome[k]||0), available: b.res[k]||0 })).filter(d => d.deficit > 0 && d.available > 0).sort((a, b) => b.deficit - a.deficit);
+    html += '<div style="font-size:9px;margin-bottom:4px;">Resource value: <span style="color:' + valueCol + ';font-weight:bold;">' + valueRating + '</span> &nbsp;|&nbsp; Resources: <span style="color:#ccc;">' + Object.keys(b.res).join(', ') + '</span></div>';
+    if (deficits.length > 0) {
+      html += '<div style="font-size:8px;color:#ff8844;margin-bottom:2px;">Earth needs from here:</div>';
+      deficits.forEach(d => { html += '<div style="font-size:8px;color:#ffaa66;margin-left:8px;">\u2192 ' + d.r + ' (deficit: ' + d.deficit.toFixed(2) + '/yr, available: ' + (d.available > 60 ? 'abundant' : d.available > 30 ? 'moderate' : 'limited') + ')</div>'; });
+    } else {
+      html += '<div style="font-size:8px;color:#44ff88;">Earth has no critical deficits this body can fill.</div>';
+    }
+    if (baseEst) {
+      const hasSolid = (st.buildings['solid_col'] === 'built'), hasGas = (st.buildings['gas_col'] === 'built'), hasLiquid = (st.buildings['liquid_col'] === 'built');
+      const pups = (PLANET_UPGRADES[key]||[]).filter(u => G.planetUpgrades[u.id] && u.yieldBonus);
+      const outputs = [];
+      Object.entries(b.res).forEach(([r, baseYield]) => {
+        let collected = false;
+        if ((r==='Fe'||r==='Ni'||r==='Pt') && hasSolid) collected = true;
+        if ((r==='He-3'||r==='S') && hasGas) collected = true;
+        if (r==='H\u2082O' && hasLiquid) collected = true;
+        if (!collected) return;
+        let rate = baseYield * 0.02;
+        pups.forEach(u => { if (u.yieldBonus[r]) rate *= (1 + u.yieldBonus[r]); });
+        outputs.push(r + ': +' + rate.toFixed(2) + '/yr');
+      });
+      if (outputs.length) html += '<div style="font-size:8px;color:#44ff88;margin-top:4px;">Supplying Earth: ' + outputs.join(', ') + '</div>';
+    }
+    html += '</div>';
+  }
+
+  // COLONY STATUS
+  if (baseEst || st.colony === 'building' || st.colony === 'traveling') {
+    html += '<div style="border-top:1px solid #111;padding-top:6px;margin-bottom:6px;">';
+    const baseName = b.baseName || 'Base';
+    if (baseEst) {
+      html += '<div style="color:#44ff88;font-size:9px;letter-spacing:1px;margin-bottom:4px;">' + baseName.toUpperCase() + ' \u2014 OPERATIONAL</div>';
+      const builtCount = Object.values(st.buildings).filter(s => s === 'built').length;
+      const buildingCount = Object.values(st.buildings).filter(s => s === 'building').length;
+      html += '<div style="font-size:8px;color:#aaa;margin-bottom:4px;">Buildings: <span style="color:#44ff88;">' + builtCount + ' active</span>';
+      if (buildingCount > 0) html += ' <span style="color:#00ccff;">(' + buildingCount + ' constructing)</span>';
+      html += '</div>';
+      const builtList = BUILD_GRID.filter(u => st.buildings[u.id] === 'built');
+      if (builtList.length) { html += '<div style="font-size:8px;color:#777;margin-bottom:2px;">'; builtList.forEach(u => { html += '<span style="margin-right:8px;">' + u.icon + ' ' + u.name.replace('\n', ' ') + '</span>'; }); html += '</div>'; }
+      const pups = PLANET_UPGRADES[key] || [];
+      const builtUpgrades = pups.filter(u => G.planetUpgrades[u.id]);
+      if (builtUpgrades.length) { html += '<div style="font-size:8px;color:#ffff66;margin-top:2px;">'; builtUpgrades.forEach(u => { html += '<div>\u2713 ' + u.name + ' <span style="color:#666;">\u2014 ' + u.desc + '</span></div>'; }); html += '</div>'; }
+    } else {
+      html += '<div style="color:#00ccff;font-size:9px;">Building ' + baseName + '\u2026 ' + fmtT(Math.max(0, st.colonyTimer)) + ' remaining</div>';
+    }
+    html += '</div>';
+  }
+
+  // RESOURCES
+  if (scanDone && b.res) {
+    html += '<div style="border-top:1px solid #111;padding-top:6px;margin-bottom:6px;">';
+    html += '<div style="color:#777;font-size:8px;letter-spacing:1px;margin-bottom:5px;">RESOURCES DETECTED</div>';
+    Object.entries(b.res).forEach(([r, max]) => {
+      const pct = Math.min(100, Math.floor(max / 1.2));
+      const col = max > 60 ? '#44ff88' : max > 30 ? '#ffff00' : '#ff8844';
+      const label = max > 60 ? 'abundant' : max > 30 ? 'moderate' : 'limited';
+      html += '<div class="res-bar-row"><span class="res-bar-label">' + r + '</span><div class="res-bar-track"><div class="res-bar-fill" style="width:' + pct + '%;background:' + col + '"></div></div><span class="res-bar-amt">' + label + '</span></div>';
+    });
+    html += '</div>';
+  } else if (st.scan === 'scanning') {
+    html += '<div style="color:#004466;font-size:9px;padding:4px 0;border-top:1px solid #111;">Scanning\u2026</div>';
+  } else if (!scanDone && b.res) {
+    html += '<div style="border-top:1px solid #111;padding-top:6px;margin-bottom:6px;"><div style="color:#333;font-size:8px;letter-spacing:1px;">RESOURCES: SCAN REQUIRED</div><div style="font-size:8px;color:#444;margin-top:2px;">Known resource types: ' + Object.keys(b.res).length + '</div></div>';
+  }
+
+  // OPERATIONS
+  html += '<div style="border-top:1px solid #111;padding-top:6px;margin-bottom:6px;">';
+  html += '<div style="color:#666;font-size:8px;letter-spacing:1px;margin-bottom:4px;">OPERATIONS</div>';
+  html += '<div style="display:flex;flex-direction:column;gap:3px;">';
+  if (st.scan === 'none') { html += '<div class="scan-step' + (onPlanet ? ' active" data-action="scan"' : '"') + '>\u2460 SCAN' + (onPlanet ? ' (' + fmtT(lightDelay(key) * 2) + ')' : ' \u2014 fly here first') + '</div>'; }
+  else if (st.scan === 'scanning') { html += '<div class="scan-step inprog">\u2460 SCANNING\u2026 ' + fmtT(Math.max(0, st.scanTimer)) + ' remaining</div>'; }
+  else { html += '<div class="scan-step done">\u2460 SCAN COMPLETE \u2713</div>'; }
+  if (!scanDone) { html += '<div class="scan-step">\u2461 COLLECT \u2014 scan first</div>'; }
+  else if (st.collect === 'collecting') { html += '<div class="scan-step inprog">\u2461 COLLECTING\u2026 ' + fmtT(Math.max(0, st.collectTimer)) + ' remaining</div>'; }
+  else if (st.collect === 'pick') { const opts = st.collectResOptions||[]; html += '<div class="scan-step active">\u2461 CHOOSE RESOURCE TO LOAD<br>' + opts.map(o => '<button class="ubtn" style="margin:4px 4px 0 0;" data-action="pick" data-res="' + o.r + '" data-amt="' + o.amt + '">' + o.r + ' &nbsp;' + o.amt + 't</button>').join('') + '</div>'; }
+  else if (st.collect === 'loaded') { html += '<div class="scan-step done">\u2461 CARGO LOADED \u2713 \u2014 return to Earth</div>'; }
+  else if (onPlanet) { html += '<div class="scan-step active" data-action="collect">\u2461 COLLECT (' + fmtT(lightDelay(key) * 2) + ')</div>'; }
+  else { html += '<div class="scan-step">\u2461 COLLECT \u2014 fly here first</div>'; }
+  const baseName = b.baseName || 'Base';
+  const baseCost = BASE_COSTS[b.baseType] || BASE_COSTS.resource;
+  const baseCostStr = Object.entries(baseCost).map(([k, v]) => { const have = G.res[k]||0; const col = have >= v ? '#44ff88' : '#ff6666'; return '<span style="color:' + col + '">' + v + ' ' + k + '</span>'; }).join(', ');
+  if (!scanDone) { html += '<div class="scan-step">\u2462 ' + baseName.toUpperCase() + ' \u2014 scan first</div>'; }
+  else if (baseEst) { html += '<div class="scan-step done">\u2462 ' + baseName.toUpperCase() + ' ESTABLISHED \u2713</div>'; }
+  else if (st.colony === 'building' || st.colony === 'traveling') { html += '<div class="scan-step inprog">\u2462 BUILDING ' + baseName.toUpperCase() + '\u2026 ' + fmtT(Math.max(0, st.colonyTimer)) + ' left</div>'; }
+  else if (onPlanet) { html += '<div class="scan-step active" data-action="establish">\u2462 ESTABLISH ' + baseName.toUpperCase() + ' &nbsp; ' + baseCostStr + '</div>'; }
+  else { html += '<div class="scan-step">\u2462 ' + baseName.toUpperCase() + ' \u2014 fly here first</div>'; }
+  html += '</div></div>';
+
+  // BUILD GRID
+  if (baseEst) {
+    html += '<div style="border-top:1px solid #111;padding-top:6px;margin-bottom:6px;">';
+    html += '<div style="color:#666;font-size:8px;letter-spacing:2px;margin-bottom:8px;">BUILD</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;">';
+    BUILD_GRID.forEach(u => {
+      const bstate = st.buildings[u.id] || 'locked';
+      const reqMet = u.req === 'probe' ? scanDone : u.req === 'colony' ? baseEst : u.req === 'colony_hub' ? (st.buildings['colony_hub'] === 'built') : false;
+      let cls = 'build-sq', content = '';
+      if (bstate === 'built') { cls += ' built'; content = '<div class="sq-icon">' + u.icon + '</div><div class="sq-name">' + u.name.replace('\n','<br>') + '</div><div style="color:#44ff88;font-size:7px;margin-top:2px">ACTIVE</div>'; }
+      else if (bstate === 'building') { cls += ' building'; content = '<div class="sq-icon">' + u.icon + '</div><div class="sq-name">' + u.name.replace('\n','<br>') + '</div><div class="sq-prog" style="width:' + (st.buildTimers[u.id]||0) + '%"></div>'; }
+      else if (reqMet) { cls += ' available'; const cc = Object.entries(u.cost).map(([k,v]) => '<span style="color:' + ((G.res[k]||0) >= v ? '#44ff88' : '#ff6666') + '">' + v + k + '</span>').join(' '); content = '<div class="sq-icon">' + u.icon + '</div><div class="sq-name">' + u.name.replace('\n','<br>') + '</div><div class="sq-cost">' + cc + '</div>'; }
+      else { cls += ' locked'; content = '<div class="sq-lock">\uD83D\uDD12</div><div class="sq-name">' + u.name.replace('\n','<br>') + '</div>'; }
+      const click = (reqMet && bstate !== 'built' && bstate !== 'building') ? ' data-action="build" data-uid="' + u.id + '"' : '';
+      html += '<div class="' + cls + '" title="' + u.desc + '"' + click + '>' + content + '</div>';
+    });
+    html += '</div></div>';
+    const pups = PLANET_UPGRADES[key] || [];
+    const unbuiltPups = pups.filter(u => !G.planetUpgrades[u.id]);
+    if (unbuiltPups.length) {
+      html += '<div style="border-top:1px solid #111;padding-top:6px;">';
+      html += '<div style="color:#666;font-size:8px;letter-spacing:2px;margin-bottom:4px;">AVAILABLE UPGRADES</div>';
+      unbuiltPups.forEach(u => {
+        const cc = Object.entries(u.cost).map(([k,v]) => '<span style="color:' + ((G.res[k]||0) >= v ? '#44ff88' : '#ff6666') + '">' + v + ' ' + k + '</span>').join(', ');
+        const canAfford = Object.entries(u.cost).every(([k,v]) => (G.res[k]||0) >= v);
+        html += '<div class="upg-row"><span class="uname">' + u.name + '</span><span class="ucost">' + cc + '</span><span class="udesc">' + u.desc + '</span><button class="ubtn" data-action="upgrade" data-uid="' + u.id + '"' + (canAfford ? '' : ' disabled style="opacity:.3;cursor:not-allowed"') + '>BUILD</button></div>';
+      });
+      html += '</div>';
+    }
+  }
+
+  body.innerHTML = html;
+}
+
+
+// ───────────────────────────────────────────────────────────────
+//  11. BOTTOM PANEL SYSTEM
+// ───────────────────────────────────────────────────────────────
+
+function closePanel() {
+  G.panelMode = null;
+  G.panelKey = null;
+  G.selectedBody = null;
+  closePlanetPopup();
+}
+
+function openPanel(mode, key) {
+  G.panelMode = mode;
+  G.panelKey = key;
+
+  if (mode === 'body') {
+    if (key === 'earth') {
+      openEarthPopup();
+      return;
+    }
+    openPlanetPopup(key);
+    return;
+  }
+
+  if (mode === 'star') {
+    const s = NAMED_STARS.find(x => x.name === key);
+    if (!s) return;
+    const w = WM.windows.get('planet-info');
+    if (w) {
+      w.titleEl.textContent = s.name.toUpperCase();
+      const { earthDays, shipDays } = calcTravel(s.ly * 63241.077, G.shipV);
+      w.bodyEl.innerHTML =
+        '<span class="pdesc">' + s.type + '  |  ' + s.temp + '  |  ' + s.ly + ' light-years from Sol</span><br>' +
+        '<span class="pstat">' + s.desc + '</span><br>' +
+        '<span class="pstat">At ' + G.shipV.toFixed(2) + 'c: Earth time <b style="color:#fff">' + fmtT(earthDays) +
+        '</b>  Ship time: ' + fmtT(shipDays) + '</span><br>' +
+        '<span class="warn" style="font-size:9px;">\u26A0 Beyond current mission range. Engine upgrades required.</span>';
+      WM.show('planet-info');
+    }
+    return;
+  }
+
+  if (mode === 'asteroid') {
+    const a = ASTEROIDS.find(x => x.name === key);
+    if (!a) return;
+    const w = WM.windows.get('planet-info');
+    if (w) {
+      w.titleEl.textContent = a.name.toUpperCase();
+      w.bodyEl.innerHTML =
+        '<span class="pdesc">' + a.type + '  |  Est. diameter: ' + a.diam + 'm</span><br>' +
+        '<span class="pstat">Composition: ' + a.comp + '</span><br>' +
+        '<span class="' + (a.threat ? 'warn' : 'good') + '" style="font-size:9px;">' +
+        (a.threat ? '\uD83D\uDD34 THREAT FLAG: trajectory analysis inconclusive' : '\u2713 Non-threatening trajectory. Perihelion: safe.') + '</span><br>' +
+        '<span class="plog">Position: ' + a.x.toFixed(3) + ' AU, ' + a.y.toFixed(3) + ' AU from Sol</span>';
+      WM.show('planet-info');
+    }
+    return;
+  }
+}
+
+function renderPanel() {
+  // Legacy compat — no longer used for main rendering
+}
+
+
+// ───────────────────────────────────────────────────────────────
+//  12. SHIP UPGRADES
+// ───────────────────────────────────────────────────────────────
+
+function buyUpgrade(id) {
+  const u = UPGRADES.find(x => x.id === id);
+  if (!u || G.upgrades[id]) return;
+  if (u.req && !G.upgrades[u.req]) {
+    addLog('\u26A0 Prerequisite not met: ' + UPGRADES.find(x => x.id === u.req).name);
+    return;
+  }
+  if (!Object.entries(u.cost).every(([k, v]) => (G.res[k] || 0) >= v)) {
+    addLog('\u26A0 Insufficient resources.');
+    return;
+  }
+  Object.entries(u.cost).forEach(([k, v]) => { G.res[k] -= v; });
+  G.upgrades[id] = true;
+
+  if (id === 'engine2') { G.shipV = 0.25; addLog('\u2713 Engine Mk.II installed. 0.25c achieved.'); }
+  if (id === 'engine3') { G.shipV = 0.50; addLog('\u2713 Engine Mk.III installed. 0.50c achieved. Dilation significant.'); }
+  if (id === 'cargo2')  { G.cargoMult = 2; addLog('\u2713 Cargo expanded. Double yield per run.'); }
+  if (id === 'scanner') { G.hasScanner = true; addLog('\u2713 Deep scanner online.'); }
+  if (id === 'cryo')    { G.hasCryo = true; addLog('\u2713 Cryo system online. Crew stasis available.'); CREW.forEach(c => { if (c.status !== 'DEAD') c.status = 'ACTIVE'; }); }
+  if (id === 'shield')  { G.hasShield = true; addLog('\u2713 Monopole shield active.'); }
+  renderPanel();
+}
+
+function buyPlanetUpgrade(bodyKey, uid) {
+  const pups = PLANET_UPGRADES[bodyKey] || [];
+  const u = pups.find(x => x.id === uid);
+  if (!u || G.planetUpgrades[uid]) return;
+  if (!Object.entries(u.cost).every(([k, v]) => (G.res[k] || 0) >= v)) {
+    addLog('\u26A0 Insufficient resources.');
+    return;
+  }
+  Object.entries(u.cost).forEach(([k, v]) => { G.res[k] -= v; });
+  G.planetUpgrades[uid] = true;
+  addLog('\u2713 ' + BODIES[bodyKey].name + ': ' + u.name + ' built.');
+  if (u.bonus === 'stab6') G.earthStab = Math.min(100, G.earthStab + 6);
+  if (u.bonus === 'xp10') awardXP(10);
+  renderPanel();
+}
+
+
+// ───────────────────────────────────────────────────────────────
+//  13. HUMANITY LEVEL SYSTEM
+// ───────────────────────────────────────────────────────────────
+
+function awardXP(amt) {
+  G.humanityXP += amt;
+  while (G.humanityXP >= G.humanityXPNext) {
+    G.humanityXP -= G.humanityXPNext;
+    G.humanityLevel++;
+    G.humanityXPNext = Math.floor(G.humanityXPNext * 1.4);
+    G.pendingLevelUp = true;
+  }
+  if (G.pendingLevelUp) showLevelUp();
+}
+
+function showLevelUp() {
+  G.pendingLevelUp = false;
+  const pool = HUMANITY_POOL.filter(u => !G.humanityBonuses[u.id]);
+  if (pool.length === 0) {
+    addLog('\u2713 All humanity upgrades acquired. Civilization complete.');
+    return;
+  }
+  const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(3, pool.length));
+  setTimeScale(0);
+  document.getElementById('lu-title').textContent = 'HUMANITY LEVEL ' + G.humanityLevel;
+  document.getElementById('lu-sub').textContent = 'Choose one advancement for civilization \u2014 choose wisely.';
+  document.getElementById('lu-cards').innerHTML = shuffled.map(u =>
+    '<div class="lu-card" onclick="pickHumanity(\'' + u.id + '\')">' +
+    '<div class="lc-name">' + u.name + '</div>' +
+    '<div class="lc-desc">' + u.desc + '</div></div>'
+  ).join('');
+  document.getElementById('lvlup').style.display = 'block';
+}
+
+function pickHumanity(id) {
+  const u = HUMANITY_POOL.find(x => x.id === id);
+  if (!u) return;
+  G.humanityBonuses[id] = true;
+  document.getElementById('lvlup').style.display = 'none';
+  setTimeScale(1);
+  addLog('\u25C6 HUMANITY LVL ' + G.humanityLevel + ': ' + u.name + ' \u2014 ' + u.desc.split('.')[0] + '.');
+}
+
+function applyPassiveBonuses(dtDays) {
+  const dtYears = dtDays / DPY;
+  const RES_KEYS = ['Fe', 'Ni', 'H\u2082O', 'He-3', 'S', 'Pt'];
+
+  // --- 1. Calculate total income this tick ---
+  const income = {};
+  RES_KEYS.forEach(k => { income[k] = G.earthBaseGen[k] || 0; });
+
+  // Colony collector production: for each colonized planet with built collectors
+  Object.entries(G.bodyStates).forEach(([bodyKey, st]) => {
+    if (st.colony !== 'done') return;
+    const b = BODIES[bodyKey];
+    if (!b || !b.res) return;
+
+    // Get yield bonuses from planet upgrades
+    const pups = (PLANET_UPGRADES[bodyKey] || []).filter(u => G.planetUpgrades[u.id] && u.yieldBonus);
+
+    // Check which collector types are built
+    const hasSolid  = (st.buildings['solid_col'] === 'built');
+    const hasGas    = (st.buildings['gas_col'] === 'built');
+    const hasLiquid = (st.buildings['liquid_col'] === 'built');
+
+    Object.entries(b.res).forEach(([r, baseYield]) => {
+      // Determine if the right collector type is built for this resource
+      let collected = false;
+      if ((r === 'Fe' || r === 'Ni' || r === 'Pt') && hasSolid) collected = true;
+      if ((r === 'He-3' || r === 'S') && hasGas) collected = true;
+      if (r === 'H\u2082O' && hasLiquid) collected = true;
+
+      if (!collected) return;
+
+      // Base rate: 2% of planet yield per year
+      let rate = baseYield * 0.02;
+
+      // Apply planet upgrade bonuses
+      pups.forEach(u => { if (u.yieldBonus[r]) rate *= (1 + u.yieldBonus[r]); });
+
+      income[r] = (income[r] || 0) + rate;
+    });
+  });
+
+  // Store income for HUD display
+  G.earthIncome = { ...income };
+
+  // --- 2. Apply income to Earth stockpile ---
+  RES_KEYS.forEach(k => {
+    G.earthRes[k] = (G.earthRes[k] || 0) + income[k] * dtYears;
+  });
+
+  // --- 3. Consume demand from Earth stockpile ---
+  let demandMet = 0;
+  let demandTotal = 0;
+  RES_KEYS.forEach(k => {
+    const need = (G.earthDemand[k] || 0) * dtYears;
+    demandTotal += need;
+    const have = G.earthRes[k] || 0;
+    const consumed = Math.min(have, need);
+    G.earthRes[k] = Math.max(0, have - consumed);
+    demandMet += consumed;
+  });
+
+  // --- 4. Stability based on supply vs demand ---
+  if (demandTotal > 0) {
+    const ratio = demandMet / demandTotal; // 0 to 1
+    if (ratio >= 0.95) {
+      // Surplus: stability slowly recovers
+      G.earthStab = Math.min(100, G.earthStab + 1.5 * dtYears);
+    } else {
+      // Deficit: stability decays proportional to shortfall
+      const deficit = 1 - ratio;
+      G.earthStab = Math.max(0, G.earthStab - deficit * 15 * dtYears);
+    }
+  }
+
+  // --- 5. Humanity passive bonuses ---
+  if (G.humanityBonuses['hu_grid'])     G.earthStab = Math.min(100, G.earthStab + 2 * dtYears);
+  if (G.humanityBonuses['hu_monopole']) G.res['MNPL'] += 2 * dtYears;
+
+  // --- 6. Planet passive bonuses ---
+  if (G.planetUpgrades['mars_terraforge']) G.earthStab = Math.min(100, G.earthStab + 3 * dtYears);
+  if (G.planetUpgrades['mercury_relay'])   awardXP(5 * dtYears);
+  if (G.planetUpgrades['saturn_titan'])    awardXP(8 * dtYears);
+  if (G.planetUpgrades['neptune_triton'])  awardXP(15 * dtYears);
+}
+
+
+// ───────────────────────────────────────────────────────────────
+//  14. EVENTS
+// ───────────────────────────────────────────────────────────────
+
+function checkEvents() {
+  if (G.earthDays < G.nextEvt) return;
+
+  // FIX: Apply humanity bonuses to event filtering
+  let pool = EVTS.filter(e => {
+    // Check if event type is disabled by humanity bonuses
+    if (G.humanityBonuses['hu_food']     && e.tag === 'crops')    return false;
+    if (G.humanityBonuses['hu_medicine'] && e.tag === 'illness')  return false;
+    if (G.humanityBonuses['hu_water']    && e.tag === 'water')    return false;
+
+    // Chance-based filtering
+    let chance = e.chance;
+    if (G.humanityBonuses['hu_asteroid'] && e.tag === 'asteroid') chance *= 0.4;
+    if (G.humanityBonuses['hu_diplomacy'] && e.type === 'good')   chance *= 1.4;
+
+    return Math.random() < chance;
+  });
+
+  if (!pool.length) {
+    G.nextEvt += 80 + Math.random() * 200;
+    return;
+  }
+
+  const e = pool[Math.floor(Math.random() * pool.length)];
+  let delta = e.delta;
+
+  // Apply damage reduction bonuses
+  if (delta < 0) {
+    if (G.hasShield) delta = Math.ceil(delta / 2);
+    if (G.humanityBonuses['hu_resilience']) delta = Math.min(0, delta + 2);
+    if (G.humanityBonuses['hu_rationing'])  delta = Math.ceil(delta * 0.75);
+  }
+
+  G.earthStab = Math.max(0, Math.min(100, G.earthStab + delta));
+
+  // Auto-repair after event
+  if (G.humanityBonuses['hu_ai'] && delta < 0) {
+    G.earthStab = Math.min(100, G.earthStab + 3);
+  }
+
+  const prefix = { bad: '\u26A0 ', crisis: '\uD83D\uDD34 ', good: '\u2713 ', mystery: '\u25C6 ' };
+  addLog((prefix[e.type] || '') + e.text);
+
+  // Push to alerts window with Earth's autonomous response
+  let response = null;
+  if (delta < 0 && e.delta < 0) {
+    const mitigations = [];
+    if (G.hasShield) mitigations.push('Monopole Shield halved impact');
+    if (G.humanityBonuses['hu_resilience']) mitigations.push('Population Resilience reduced damage');
+    if (G.humanityBonuses['hu_rationing']) mitigations.push('Rationing Protocol absorbed 25%');
+    if (G.humanityBonuses['hu_ai']) mitigations.push('AI Systems auto-repaired +3% stability');
+    if (mitigations.length) {
+      response = mitigations.join('. ') + '. [Stability: ' + delta + ']';
+    } else {
+      response = 'No defenses active. Stability: ' + delta;
+    }
+  } else if (delta > 0) {
+    response = 'Stability +' + delta;
+  }
+  addAlert(e.type, e.text, response);
+
+  G.nextEvt = G.earthDays + 150 + Math.random() * 400;
+}
+
+// Alert system for Earth autonomous responses
+const ALERTS = [];
+
+function addAlert(type, text, response) {
+  ALERTS.unshift({ type, text, response: response || null, time: earthDate() });
+  if (ALERTS.length > 20) ALERTS.pop();
+  const w = WM.windows.get('alerts');
+  if (w) {
+    WM.setBadge('alerts', Math.min(99, (w.badge || 0) + 1));
+    if (w.visible && !w.collapsed && w.renderFn) w.renderFn(w.bodyEl);
+  }
+}
+
+function addLog(msg) {
+  G.log.unshift(msg);
+  if (G.log.length > 12) G.log.pop();
+  // Update event log window
+  const w = WM.windows.get('event-log');
+  if (w && w.visible && !w.collapsed && w.renderFn) w.renderFn(w.bodyEl);
+}
+
+
+// ───────────────────────────────────────────────────────────────
+//  15. TRAVEL
+// ───────────────────────────────────────────────────────────────
+
+function launchToPopupBody() {
+  if (!G.planetPopupKey || G.traveling) return;
+  G.selectedBody = G.planetPopupKey;
+  closePlanetPopup();
+  confirmLaunch();
+}
+
+function confirmLaunch() {
+  if (!G.selectedBody || G.traveling || G.selectedBody === G.currentBody) return;
+  const dist = auDist(G.currentBody, G.selectedBody);
+  const { earthDays, shipDays, gamma } = calcTravel(dist, G.shipV);
+  G.travel = { from: G.currentBody, to: G.selectedBody, earthDays, shipDays, gamma, distAU: dist, realDur: 8, prog: 0 };
+  G.traveling = true;
+  G.shipWorld = { ...bw(G.travel.from) };
+
+  // Cancel any in-progress collect on the departing body
+  const fromSt = G.bodyStates[G.currentBody];
+  if (fromSt && fromSt.collect === 'collecting') {
+    fromSt.collect = 'none';
+    fromSt.collectTimer = 0;
+    addLog('\u26A0 Collection aborted \u2014 ship departed.');
+  }
+
+  // Crew cryo for long trips
+  if (earthDays > 30) {
+    CREW.forEach(c => { if (c.status === 'ACTIVE') c.status = 'CRYO'; });
+  }
+  if (earthDays > 500 && !G.hasCryo) {
+    addLog('\u26A0 WARNING: Trip exceeds 500 Earth years without cryo. Crew at risk.');
+  }
+
+  closePanel();
+  G.selectedBody = null;
+  addLog('LAUNCH \u2192 ' + BODIES[G.travel.to].name + ' | ' + dist.toFixed(3) + ' AU | Earth: ' + fmtT(earthDays) + ' | Ship: ' + fmtT(shipDays));
+}
+
+function updateTravel(dt) {
+  const t = G.travel;
+  const prev = t.prog;
+  t.prog = Math.min(1, t.prog + dt / t.realDur);
+  const dtDays = t.earthDays * (t.prog - prev);
+  G.earthDays += dtDays;
+
+  const fw = bw(t.from), tw = bw(t.to);
+  G.shipWorld = {
+    x: fw.x + (tw.x - fw.x) * t.prog,
+    y: fw.y + (tw.y - fw.y) * t.prog,
+  };
+
+  // FIX: Update body states and travel dots during travel too
+  updateBodyStates(dtDays);
+  updateTravelDots(dtDays);
+  checkEvents();
+
+  if (t.prog >= 1) {
+    G.traveling = false;
+    G.currentBody = t.to;
+    G.shipWorld = bw(t.to);
+    arriveAt(t.to);
+  }
+}
+
+function arriveAt(key) {
+  const b = BODIES[key];
+  CREW.forEach(c => { if (c.status === 'CRYO') c.status = 'ACTIVE'; });
+
+  // Crew casualty on very long trips without cryo
+  if (G.travel.earthDays > 500 && !G.hasCryo) {
+    const alive = CREW.filter(c => c.status !== 'DEAD');
+    if (alive.length) {
+      alive[0].status = 'DEAD';
+      addLog('\uD83D\uDD34 CREW CASUALTY: ' + alive[0].name + ' \u2014 life support failure.');
+    }
+  }
+
+  addLog('ARRIVED: ' + b.name + ' \u2014 ' + earthDate());
+
+  // Deliver cargo to Earth on arrival
+  if (key === 'earth') {
+    const RES_KEYS = ['Fe', 'Ni', 'H\u2082O', 'He-3', 'S', 'Pt'];
+    const hasCargo = RES_KEYS.some(k => (G.res[k] || 0) > 0);
+    if (hasCargo) {
+      const col = [];
+      RES_KEYS.forEach(k => {
+        const amt = G.res[k] || 0;
+        if (amt > 0) {
+          G.earthRes[k] = (G.earthRes[k] || 0) + amt;
+          col.push(k + ':' + Math.floor(amt) + 't');
+          G.res[k] = 0;
+        }
+      });
+      const totalVal = col.length;
+      const xp = totalVal * 5;
+      awardXP(xp);
+      addLog('\u2713 Cargo delivered to Earth: ' + col.join(' ') + '  XP +' + xp);
+    } else {
+      addLog('Docked at Earth. No cargo to deliver.');
+    }
+    // Reset collect state on all bodies so they can be mined again
+    Object.values(G.bodyStates).forEach(st => {
+      if (st.collect === 'loaded') {
+        st.collect = 'none';
+        st.collectResOptions = null;
+      }
+    });
+  }
+
+  // Cancel collecting if we left a planet mid-collect
+  if (G.collecting && G.collectTarget !== key) {
+    G.collecting = false;
+    G.collectTarget = null;
+  }
+}
+
+
+// ───────────────────────────────────────────────────────────────
+//  16. RENDERING
+// ───────────────────────────────────────────────────────────────
+
+// Background stars (procedural)
+const STARS = Array.from({ length: 200 }, (_, i) => ({
+  wx: (((i * 7919 + 314) % 99991) / 99991 - 0.5) * 100,
+  wy: (((i * 6271 + 271) % 99991) / 99991 - 0.5) * 100,
+  b: 0.08 + (i % 8) * 0.09,
+}));
+
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+
+  // Background stars
+  STARS.forEach(s => {
+    const p = w2s(s.wx, s.wy);
+    if (p.x < -1 || p.x > W + 1 || p.y < -1 || p.y > H + 1) return;
+    ctx.fillStyle = 'rgba(255,255,255,' + s.b + ')';
+    ctx.fillRect(~~p.x, ~~p.y, 1, 1);
+  });
+
+  // Named stars
+  NAMED_STARS.forEach(s => {
+    const sw = { x: s.au * Math.cos(s.ang), y: s.au * Math.sin(s.ang) };
+    const p = w2s(sw.x, sw.y);
+    if (p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20) return;
+    const sel = (G.panelMode === 'star' && G.panelKey === s.name);
+    if (sel) {
+      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 12);
+      g.addColorStop(0, s.col + '66');
+      g.addColorStop(1, 'transparent');
+      ctx.beginPath(); ctx.arc(p.x, p.y, 12, 0, Math.PI * 2);
+      ctx.fillStyle = g; ctx.fill();
+    }
+    ctx.beginPath(); ctx.arc(p.x, p.y, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = sel ? s.col : s.col + '99';
+    ctx.fill();
+    if (CAM.zoom > 3) {
+      ctx.font = '7px Courier New';
+      ctx.fillStyle = sel ? '#fff' : '#666';
+      ctx.fillText(s.name + ' (' + s.ly + 'ly)', p.x + s.r + 2, p.y + 3);
+    }
+  });
+
+  // Orbit rings
+  if (SETTINGS.orbits) {
+    const sun = w2s(0, 0);
+    Object.values(BODIES).forEach(b => {
+      if (b.au === 0) return;
+      ctx.beginPath(); ctx.arc(sun.x, sun.y, b.au * CAM.zoom, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,255,65,.05)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    });
+  }
+
+  // Route lines
+  G.routes.forEach(key => {
+    if (key === 'earth') return;
+    const bp = w2s(bw(key).x, bw(key).y);
+    const ep = w2s(bw('earth').x, bw('earth').y);
+    ctx.beginPath(); ctx.moveTo(bp.x, bp.y); ctx.lineTo(ep.x, ep.y);
+    ctx.strokeStyle = 'rgba(0,255,65,.18)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 6]); ctx.stroke(); ctx.setLineDash([]);
+  });
+
+  // Selection line
+  if (G.selectedBody && !G.traveling && G.selectedBody !== G.currentBody) {
+    const cp = w2s(G.shipWorld.x, G.shipWorld.y);
+    const sp = w2s(bw(G.selectedBody).x, bw(G.selectedBody).y);
+    ctx.beginPath(); ctx.moveTo(cp.x, cp.y); ctx.lineTo(sp.x, sp.y);
+    ctx.strokeStyle = 'rgba(0,204,255,.35)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 4]); ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // Travel line
+  if (G.traveling) {
+    const sw = w2s(G.shipWorld.x, G.shipWorld.y);
+    const tw2 = bw(G.travel.to);
+    const tp = w2s(tw2.x, tw2.y);
+    ctx.beginPath(); ctx.moveTo(sw.x, sw.y); ctx.lineTo(tp.x, tp.y);
+    ctx.strokeStyle = 'rgba(255,255,255,.1)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 5]); ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // Asteroids
+  ASTEROIDS.forEach(a => {
+    const p = w2s(a.x, a.y);
+    if (p.x < -10 || p.x > W + 10 || p.y < -10 || p.y > H + 10) return;
+    const sel = (G.panelMode === 'asteroid' && G.panelKey === a.name);
+    ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1.5, a.r), 0, Math.PI * 2);
+    ctx.fillStyle = sel ? '#ffcc44' : a.threat ? '#ff4444' : '#888877';
+    ctx.fill();
+    if (sel && CAM.zoom > 8) {
+      ctx.font = '7px Courier New';
+      ctx.fillStyle = '#ffcc44';
+      ctx.fillText(a.name, p.x + 3, p.y - 3);
+    }
+  });
+
+  // Solar bodies
+  Object.entries(BODIES).forEach(([key, b]) => {
+    const bpos = bw(key), p = w2s(bpos.x, bpos.y);
+    const sel = (key === G.selectedBody);
+    const cur = (key === G.currentBody);
+    const psel = (G.panelMode === 'body' && G.panelKey === key);
+
+    // Saturn's rings
+    if (key === 'saturn') {
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, b.r + Math.max(5, CAM.zoom * 0.09), 2.8, 0.2, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(232,213,163,.45)';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    }
+
+    // Selection ring
+    if (sel || psel) {
+      ctx.beginPath(); ctx.arc(p.x, p.y, b.r + 6, 0, Math.PI * 2);
+      ctx.strokeStyle = psel ? 'rgba(255,255,0,.6)' : 'rgba(0,204,255,.6)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    // Current location ring
+    if (cur && key !== 'sun') {
+      ctx.beginPath(); ctx.arc(p.x, p.y, b.r + 3, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,255,65,.5)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+
+    // Body circle
+    ctx.beginPath(); ctx.arc(p.x, p.y, b.r, 0, Math.PI * 2);
+    ctx.fillStyle = b.col;
+    ctx.fill();
+
+    // Sun glow
+    if (key === 'sun') {
+      const g = ctx.createRadialGradient(p.x, p.y, b.r, p.x, p.y, b.r * 3);
+      g.addColorStop(0, 'rgba(255,215,0,.2)');
+      g.addColorStop(1, 'rgba(255,140,0,0)');
+      ctx.beginPath(); ctx.arc(p.x, p.y, b.r * 3, 0, Math.PI * 2);
+      ctx.fillStyle = g; ctx.fill();
+    }
+
+    // Route indicator
+    if (G.routes.has(key) && key !== 'earth') {
+      ctx.beginPath(); ctx.arc(p.x, p.y, b.r + 1, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0,255,65,.4)';
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    }
+
+    // Label
+    const fs = Math.max(7, Math.min(10, CAM.zoom * 0.11));
+    const showLabel =
+      SETTINGS.labelMode === 'all' ||
+      (SETTINGS.labelMode === 'near' && (CAM.zoom > 10 || b.au < 3 || (b.au > 15 && CAM.zoom > 3)));
+    if (showLabel) {
+      ctx.font = fs + 'px Courier New';
+      ctx.fillStyle = psel ? '#ffff00' : sel ? '#00ccff' : cur ? '#00ff41' : 'rgba(0,255,65,.5)';
+      ctx.fillText(b.name, p.x + b.r + 3, p.y + 3);
+    }
+  });
+
+  // Ship (1 pixel)
+  const sp = w2s(G.shipWorld.x, G.shipWorld.y);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(~~sp.x, ~~sp.y, 1, 1);
+
+  // Crew alert indicator
+  if (CREW.some(c => c.status !== 'ACTIVE')) {
+    ctx.font = '8px Courier New';
+    ctx.fillStyle = '#ff4444';
+    ctx.fillText('!', sp.x + 3, sp.y - 2);
+  }
+
+  // Ship trail during travel
+  if (G.traveling) {
+    const fbw = bw(G.travel.from), fp = w2s(fbw.x, fbw.y);
+    const ang = Math.atan2(fp.y - sp.y, fp.x - sp.x);
+    for (let i = 1; i <= 6; i++) {
+      ctx.fillStyle = 'rgba(255,255,255,' + ((7 - i) / 30) + ')';
+      ctx.fillRect(~~(sp.x + Math.cos(ang) * i * 2.2), ~~(sp.y + Math.sin(ang) * i * 2.2), 1, 1);
+    }
+  }
+
+  // Travel dots
+  drawTravelDots();
+}
+
+
+// ───────────────────────────────────────────────────────────────
+//  17. HUD UPDATE
+// ───────────────────────────────────────────────────────────────
+
+function updateHUD() {
+  document.getElementById('zlbl').textContent = CAM.zoom.toFixed(0) + 'px/AU  SCROLL\u00B7PINCH\u00B7DRAG';
+
+  // Transit overlay
+  if (G.traveling) {
+    const t = G.travel;
+    const rem = t.earthDays * (1 - t.prog);
+    document.getElementById('transit').style.display = 'block';
+    document.getElementById('tr-dest').textContent = BODIES[t.to].name;
+    document.getElementById('tr-prog').style.width = (t.prog * 100).toFixed(1) + '%';
+    document.getElementById('tr-dist').textContent = t.distAU.toFixed(3) + ' AU';
+    document.getElementById('tr-etime').textContent = 'Earth remaining: ' + fmtT(rem);
+    document.getElementById('tr-stime').textContent = 'Ship time: ' + fmtT(t.shipDays);
+    document.getElementById('tr-gamma').textContent = 'Lorentz \u03B3 = ' + t.gamma.toFixed(6);
+  } else {
+    document.getElementById('transit').style.display = 'none';
+  }
+
+  // Update all managed windows
+  WM.updateAll();
+
+  // Planet popup refreshes are triggered by game state changes only
+}
+
+
+// ───────────────────────────────────────────────────────────────
+//  18. INPUT HANDLING
+// ───────────────────────────────────────────────────────────────
+
+const ptr = {
+  down: false, startX: 0, startY: 0,
+  lastX: 0, lastY: 0, moved: false,
+  pinching: false, pinchDist: 0,
+  pinchMidX: 0, pinchMidY: 0,
+};
+
+function cxy(cx, cy) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (cx - r.left) * (canvas.width / r.width), y: (cy - r.top) * (canvas.height / r.height) };
+}
+
+// Hit detection: Body > Star > Asteroid > Nothing
+function trySelect(cx, cy) {
+  // Bodies
+  let closest = null, closestD = Infinity;
+  Object.entries(BODIES).forEach(([key, b]) => {
+    const bp = bw(key), p = w2s(bp.x, bp.y);
+    const d = Math.hypot(cx - p.x, cy - p.y);
+    const hit = Math.max(b.r + 10, 22, 40 / Math.max(1, CAM.zoom * 0.3));
+    if (d < hit && d < closestD) { closestD = d; closest = key; }
+  });
+  if (closest) {
+    if (closest === 'earth') {
+      // Toggle Earth status window focus
+      const ew = WM.windows.get('earth-status');
+      if (ew && ew.visible) {
+        WM.focus('earth-status');
+      } else {
+        openEarthPopup();
+      }
+      return;
+    }
+    openPlanetPopup(closest);
+    return;
+  }
+
+  // Named stars
+  let starHit = null, starD = Infinity;
+  NAMED_STARS.forEach(s => {
+    const sw = { x: s.au * Math.cos(s.ang), y: s.au * Math.sin(s.ang) };
+    const p = w2s(sw.x, sw.y);
+    const d = Math.hypot(cx - p.x, cy - p.y);
+    if (d < Math.max(s.r + 14, 20) && d < starD) { starD = d; starHit = s; }
+  });
+  if (starHit) { openPanel('star', starHit.name); return; }
+
+  // Asteroids
+  let astHit = null, astD = Infinity;
+  ASTEROIDS.forEach(a => {
+    const p = w2s(a.x, a.y);
+    const d = Math.hypot(cx - p.x, cy - p.y);
+    if (d < Math.max(a.r + 14, 18) && d < astD) { astD = d; astHit = a; }
+  });
+  if (astHit) { openPanel('asteroid', astHit.name); return; }
+
+  closePanel();
+}
+
+// Mouse events
+canvas.addEventListener('mousedown', e => {
+  const p = cxy(e.clientX, e.clientY);
+  Object.assign(ptr, { down: true, moved: false, startX: p.x, startY: p.y, lastX: p.x, lastY: p.y });
+  canvas.classList.add('dragging');
+});
+
+window.addEventListener('mousemove', e => {
+  if (!ptr.down) return;
+  const p = cxy(e.clientX, e.clientY);
+  CAM.x += p.x - ptr.lastX;
+  CAM.y += p.y - ptr.lastY;
+  ptr.lastX = p.x; ptr.lastY = p.y;
+  if (Math.hypot(p.x - ptr.startX, p.y - ptr.startY) > 4) ptr.moved = true;
+});
+
+window.addEventListener('mouseup', e => {
+  if (!ptr.down) return;
+  ptr.down = false;
+  canvas.classList.remove('dragging');
+  if (!ptr.moved) {
+    const p = cxy(e.clientX, e.clientY);
+    trySelect(p.x, p.y);
+  }
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const p = cxy(e.clientX, e.clientY);
+  zoomAt(p.x, p.y, e.deltaY < 0 ? 1.12 : 1 / 1.12);
+}, { passive: false });
+
+// Touch helpers
+function td(a, b) { return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); }
+function tm(a, b) { return { x: (a.clientX + b.clientX) / 2, y: (a.clientY + b.clientY) / 2 }; }
+
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (e.touches.length === 1) {
+    const t = e.touches[0], p = cxy(t.clientX, t.clientY);
+    Object.assign(ptr, { down: true, moved: false, pinching: false, startX: p.x, startY: p.y, lastX: p.x, lastY: p.y });
+  } else if (e.touches.length === 2) {
+    ptr.down = false;
+    ptr.pinching = true;
+    ptr.pinchDist = td(e.touches[0], e.touches[1]);
+    const m = tm(e.touches[0], e.touches[1]);
+    const p = cxy(m.x, m.y);
+    ptr.pinchMidX = p.x; ptr.pinchMidY = p.y;
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (ptr.pinching && e.touches.length === 2) {
+    const nd = td(e.touches[0], e.touches[1]);
+    const m = tm(e.touches[0], e.touches[1]);
+    const p = cxy(m.x, m.y);
+    CAM.x += p.x - ptr.pinchMidX;
+    CAM.y += p.y - ptr.pinchMidY;
+    zoomAt(p.x, p.y, nd / ptr.pinchDist);
+    ptr.pinchDist = nd;
+    ptr.pinchMidX = p.x; ptr.pinchMidY = p.y;
+    ptr.moved = true;
+  } else if (ptr.down && e.touches.length === 1) {
+    const t = e.touches[0], p = cxy(t.clientX, t.clientY);
+    CAM.x += p.x - ptr.lastX;
+    CAM.y += p.y - ptr.lastY;
+    ptr.lastX = p.x; ptr.lastY = p.y;
+    if (Math.hypot(p.x - ptr.startX, p.y - ptr.startY) > 4) ptr.moved = true;
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', e => {
+  e.preventDefault();
+  if (ptr.pinching) {
+    if (e.touches.length < 2) ptr.pinching = false;
+    return;
+  }
+  if (ptr.down && !ptr.moved) trySelect(ptr.startX, ptr.startY);
+  ptr.down = false;
+}, { passive: false });
+
+// ───────────────────────────────────────────────────────────────
+//  19. WINDOW MANAGER
+// ───────────────────────────────────────────────────────────────
+
+const WM = {
+  windows: new Map(),
+  tabGroups: new Map(),
+  nextZ: 50,
+  dragging: null,
+  resizing: null,
+  container: null,
+
+  init() {
+    this.container = document.getElementById('wm-container');
+
+    // Global mouse/touch handlers for drag
+    window.addEventListener('mousemove', e => this._onMove(e.clientX, e.clientY, e));
+    window.addEventListener('mouseup', e => this._onUp(e));
+    window.addEventListener('touchmove', e => {
+      if (!this.dragging && !this.resizing) return;
+      e.preventDefault();
+      const t = e.touches[0];
+      this._onMove(t.clientX, t.clientY, e);
+    }, { passive: false });
+    window.addEventListener('touchend', e => {
+      if (!this.dragging && !this.resizing) return;
+      this._onUp(e);
+    });
+
+    // Load saved layout
+    this.loadLayout();
+  },
+
+  register(config) {
+    const win = {
+      id: config.id,
+      title: config.title,
+      x: config.x || 10,
+      y: config.y || 10,
+      w: config.w || null,
+      h: config.h || null,
+      collapsed: config.collapsed || false,
+      visible: config.visible !== false,
+      zIndex: this.nextZ++,
+      tabGroup: null,
+      pinned: config.pinned || false,
+      el: null,
+      bodyEl: null,
+      titleEl: null,
+      renderFn: config.renderFn || null,
+      minW: config.minW || 140,
+      minH: config.minH || 60,
+      resizable: config.resizable !== false,
+      badge: 0,
+    };
+
+    // Build DOM
+    const root = document.createElement('div');
+    root.className = 'gw-root' + (win.visible ? '' : ' gw-hidden');
+    root.dataset.winId = win.id;
+    root.style.zIndex = win.zIndex;
+    root.style.left = win.x + 'px';
+    root.style.top = win.y + 'px';
+    if (win.w) root.style.width = win.w + 'px';
+
+    // Title bar
+    const titlebar = document.createElement('div');
+    titlebar.className = 'gw-titlebar';
+    titlebar.addEventListener('mousedown', e => this._onDown(win.id, e.clientX, e.clientY, e));
+    titlebar.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const t = e.touches[0];
+      this._onDown(win.id, t.clientX, t.clientY, e);
+    }, { passive: false });
+
+    const title = document.createElement('span');
+    title.className = 'gw-title';
+    title.textContent = win.title;
+    win.titleEl = title;
+
+    const badge = document.createElement('span');
+    badge.className = 'gw-badge';
+    badge.dataset.badge = win.id;
+
+    const controls = document.createElement('div');
+    controls.className = 'gw-controls';
+
+    const colBtn = document.createElement('span');
+    colBtn.className = 'gw-ctrl-btn';
+    colBtn.textContent = win.collapsed ? '\u25B6' : '\u25BC';
+    colBtn.dataset.action = 'collapse';
+    colBtn.addEventListener('click', e => { e.stopPropagation(); this.toggleCollapse(win.id); });
+
+    controls.appendChild(colBtn);
+
+    if (!win.pinned) {
+      const closeBtn = document.createElement('span');
+      closeBtn.className = 'gw-ctrl-btn';
+      closeBtn.textContent = '\u00D7';
+      closeBtn.addEventListener('click', e => { e.stopPropagation(); this.hide(win.id); });
+      controls.appendChild(closeBtn);
+    }
+
+    titlebar.appendChild(title);
+    titlebar.appendChild(badge);
+    titlebar.appendChild(controls);
+
+    // Tab bar (hidden initially)
+    const tabBar = document.createElement('div');
+    tabBar.className = 'gw-tab-bar';
+    tabBar.style.display = 'none';
+
+    // Body
+    const body = document.createElement('div');
+    body.className = 'gw-body';
+    if (win.collapsed) body.style.display = 'none';
+    if (win.h) body.style.maxHeight = win.h + 'px';
+
+    // Resize handle
+    const resize = document.createElement('div');
+    resize.className = 'gw-resize-handle';
+    resize.addEventListener('mousedown', e => { e.stopPropagation(); this._onResizeDown(win.id, e.clientX, e.clientY); });
+
+    root.appendChild(titlebar);
+    root.appendChild(tabBar);
+    root.appendChild(body);
+    if (win.resizable) root.appendChild(resize);
+
+    win.el = root;
+    win.bodyEl = body;
+    win._tabBar = tabBar;
+    win._colBtn = colBtn;
+
+    this.windows.set(win.id, win);
+    this.container.appendChild(root);
+
+    // Initial render
+    if (win.renderFn && win.visible && !win.collapsed) {
+      win.renderFn(win.bodyEl);
+    }
+
+    return win;
+  },
+
+  focus(id) {
+    const win = this.windows.get(id);
+    if (!win) return;
+    // Remove focused from all
+    this.windows.forEach(w => w.el.classList.remove('gw-focused'));
+    win.zIndex = this.nextZ++;
+    win.el.style.zIndex = win.zIndex;
+    win.el.classList.add('gw-focused');
+  },
+
+  show(id) {
+    const win = this.windows.get(id);
+    if (!win) return;
+    win.visible = true;
+    win.el.classList.remove('gw-hidden');
+    this.focus(id);
+    if (win.renderFn) win.renderFn(win.bodyEl);
+  },
+
+  hide(id) {
+    const win = this.windows.get(id);
+    if (!win) return;
+    win.visible = false;
+    win.el.classList.add('gw-hidden');
+  },
+
+  toggleCollapse(id) {
+    const win = this.windows.get(id);
+    if (!win) return;
+    win.collapsed = !win.collapsed;
+    win.bodyEl.style.display = win.collapsed ? 'none' : '';
+    win._colBtn.textContent = win.collapsed ? '\u25B6' : '\u25BC';
+    this.saveLayout();
+  },
+
+  setBadge(id, count) {
+    const win = this.windows.get(id);
+    if (!win) return;
+    win.badge = count;
+    const badge = win.el.querySelector('.gw-badge');
+    if (badge) {
+      badge.textContent = count > 0 ? count : '';
+      badge.classList.toggle('visible', count > 0);
+    }
+  },
+
+  // --- Tab system ---
+  mergeToTabGroup(sourceId, targetId) {
+    const src = this.windows.get(sourceId);
+    const tgt = this.windows.get(targetId);
+    if (!src || !tgt || sourceId === targetId) return;
+
+    let groupId = tgt.tabGroup;
+    if (!groupId) {
+      groupId = 'tg_' + (this.tabGroups.size + 1);
+      tgt.tabGroup = groupId;
+      this.tabGroups.set(groupId, { winIds: [targetId], activeId: targetId });
+    }
+
+    const group = this.tabGroups.get(groupId);
+    if (group.winIds.includes(sourceId)) return;
+
+    // Remove from old group if any
+    if (src.tabGroup) this.removeFromTabGroup(sourceId);
+
+    src.tabGroup = groupId;
+    group.winIds.push(sourceId);
+
+    // Position source at target
+    src.x = tgt.x; src.y = tgt.y;
+    src.el.style.left = tgt.x + 'px';
+    src.el.style.top = tgt.y + 'px';
+
+    // Hide source body, show only active
+    src.visible = true;
+    src.el.classList.remove('gw-hidden');
+    src.el.classList.add('gw-hidden');
+
+    this._renderTabBars(groupId);
+    this.saveLayout();
+  },
+
+  removeFromTabGroup(winId) {
+    const win = this.windows.get(winId);
+    if (!win || !win.tabGroup) return;
+
+    const groupId = win.tabGroup;
+    const group = this.tabGroups.get(groupId);
+    if (!group) return;
+
+    group.winIds = group.winIds.filter(id => id !== winId);
+    win.tabGroup = null;
+
+    if (group.winIds.length <= 1) {
+      // Dissolve group
+      const remainingId = group.winIds[0];
+      if (remainingId) {
+        const rem = this.windows.get(remainingId);
+        rem.tabGroup = null;
+        rem._tabBar.style.display = 'none';
+        rem._tabBar.innerHTML = '';
+        rem.el.classList.remove('gw-hidden');
+      }
+      this.tabGroups.delete(groupId);
+    } else {
+      if (group.activeId === winId) {
+        group.activeId = group.winIds[0];
+      }
+      this._renderTabBars(groupId);
+    }
+
+    win._tabBar.style.display = 'none';
+    win._tabBar.innerHTML = '';
+    win.el.classList.remove('gw-hidden');
+  },
+
+  switchTab(groupId, winId) {
+    const group = this.tabGroups.get(groupId);
+    if (!group) return;
+    group.activeId = winId;
+
+    group.winIds.forEach(id => {
+      const w = this.windows.get(id);
+      if (id === winId) {
+        w.el.classList.remove('gw-hidden');
+        w.visible = true;
+        if (w.renderFn) w.renderFn(w.bodyEl);
+      } else {
+        w.el.classList.add('gw-hidden');
+      }
+    });
+
+    this._renderTabBars(groupId);
+  },
+
+  _renderTabBars(groupId) {
+    const group = this.tabGroups.get(groupId);
+    if (!group) return;
+
+    group.winIds.forEach(id => {
+      const w = this.windows.get(id);
+      if (id !== group.activeId) return; // Only active window shows tab bar
+
+      w._tabBar.style.display = 'flex';
+      w._tabBar.innerHTML = '';
+
+      group.winIds.forEach(tabId => {
+        const tabWin = this.windows.get(tabId);
+        const tab = document.createElement('span');
+        tab.className = 'gw-tab' + (tabId === group.activeId ? ' gw-tab-active' : '');
+        tab.textContent = tabWin.title;
+        tab.addEventListener('click', () => this.switchTab(groupId, tabId));
+        w._tabBar.appendChild(tab);
+      });
+    });
+  },
+
+  // --- Drag ---
+  _onDown(id, cx, cy, e) {
+    e.stopPropagation();
+    const win = this.windows.get(id);
+    if (!win) return;
+    this.focus(id);
+    this.dragging = { winId: id, offsetX: cx - win.x, offsetY: cy - win.y, moved: false };
+  },
+
+  _onMove(cx, cy, e) {
+    if (this.resizing) {
+      const win = this.windows.get(this.resizing.winId);
+      if (!win) return;
+      const nw = Math.max(win.minW, this.resizing.startW + (cx - this.resizing.startX));
+      const nh = Math.max(win.minH, this.resizing.startH + (cy - this.resizing.startY));
+      win.el.style.width = nw + 'px';
+      win.bodyEl.style.maxHeight = (nh - 22) + 'px';
+      win.w = nw;
+      win.h = nh - 22;
+      return;
+    }
+    if (!this.dragging) return;
+    const d = this.dragging;
+    const win = this.windows.get(d.winId);
+    if (!win) return;
+
+    const nx = cx - d.offsetX;
+    const ny = cy - d.offsetY;
+
+    // Clamp so title bar stays on screen
+    win.x = Math.max(-win.el.offsetWidth + 40, Math.min(window.innerWidth - 40, nx));
+    win.y = Math.max(0, Math.min(window.innerHeight - 22, ny));
+
+    // On mobile, lock horizontal position to 0 (vertical-only dragging)
+    if (IS_MOBILE) {
+      win.x = 0;
+      win.el.style.left = '0px';
+    } else {
+      win.el.style.left = win.x + 'px';
+    }
+    win.el.style.top = win.y + 'px';
+    d.moved = true;
+
+    // Tab merge hover detection
+    this.windows.forEach((other, otherId) => {
+      if (otherId === d.winId || !other.visible) return;
+      other.el.classList.remove('gw-tab-merge-hover');
+      const rect = other.el.getBoundingClientRect();
+      if (cx > rect.left && cx < rect.right && cy > rect.top && cy < rect.top + 30) {
+        other.el.classList.add('gw-tab-merge-hover');
+      }
+    });
+  },
+
+  _onUp(e) {
+    if (this.resizing) {
+      this.resizing = null;
+      this.saveLayout();
+      return;
+    }
+    if (!this.dragging) return;
+    const d = this.dragging;
+    this.dragging = null;
+
+    // Check for tab merge
+    if (d.moved) {
+      const cx = d.winId;
+      let merged = false;
+      this.windows.forEach((other, otherId) => {
+        other.el.classList.remove('gw-tab-merge-hover');
+        if (otherId === cx || !other.visible || merged) return;
+        const rect = other.el.getBoundingClientRect();
+        const win = this.windows.get(cx);
+        const winCx = win.x + win.el.offsetWidth / 2;
+        const winCy = win.y + 11;
+        if (winCx > rect.left && winCx < rect.right && winCy > rect.top && winCy < rect.top + 30) {
+          this.mergeToTabGroup(cx, otherId);
+          merged = true;
+        }
+      });
+      this.saveLayout();
+    }
+  },
+
+  _onResizeDown(id, cx, cy) {
+    const win = this.windows.get(id);
+    if (!win) return;
+    this.focus(id);
+    this.resizing = {
+      winId: id,
+      startX: cx, startY: cy,
+      startW: win.el.offsetWidth,
+      startH: win.el.offsetHeight,
+    };
+  },
+
+  // --- Render all visible windows (throttled) ---
+  _lastUpdate: 0,
+  updateAll() {
+    const now = performance.now();
+    if (now - this._lastUpdate < 500) return; // throttle to 2fps for HUD updates
+    this._lastUpdate = now;
+    this.windows.forEach(win => {
+      if (win.visible && !win.collapsed && win.renderFn) {
+        // Skip heavy windows — they update via their own triggers
+        if (win.id === 'earth-status') return;
+        if (win.id === 'planet-info') return;
+        win.renderFn(win.bodyEl);
+      }
+    });
+  },
+
+  // --- Persistence ---
+  saveLayout() {
+    const layout = {};
+    this.windows.forEach((win, id) => {
+      layout[id] = { x: win.x, y: win.y, w: win.w, h: win.h, collapsed: win.collapsed, visible: win.visible };
+    });
+    const groups = {};
+    this.tabGroups.forEach((g, gid) => {
+      groups[gid] = { winIds: g.winIds, activeId: g.activeId };
+    });
+    try {
+      localStorage.setItem('eoomy-wm', JSON.stringify({ layout, groups }));
+    } catch(e) {}
+  },
+
+  loadLayout() {
+    try {
+      const raw = localStorage.getItem('eoomy-wm');
+      if (!raw) return;
+      const { layout, groups } = JSON.parse(raw);
+      // We'll apply after windows are registered
+      this._savedLayout = layout;
+      this._savedGroups = groups;
+    } catch(e) {}
+  },
+
+  applyLayout() {
+    const layout = this._savedLayout;
+    if (!layout) return;
+    this.windows.forEach((win, id) => {
+      if (layout[id]) {
+        const s = layout[id];
+        win.x = s.x; win.y = s.y;
+        win.el.style.left = s.x + 'px';
+        win.el.style.top = s.y + 'px';
+        if (s.w) { win.w = s.w; win.el.style.width = s.w + 'px'; }
+        if (s.h) { win.h = s.h; win.bodyEl.style.maxHeight = s.h + 'px'; }
+        if (s.collapsed !== undefined) {
+          win.collapsed = s.collapsed;
+          win.bodyEl.style.display = s.collapsed ? 'none' : '';
+          win._colBtn.textContent = s.collapsed ? '\u25B6' : '\u25BC';
+        }
+        if (s.visible !== undefined && !win.pinned) {
+          win.visible = s.visible;
+          win.el.classList.toggle('gw-hidden', !s.visible);
+        }
+      }
+    });
+
+    // Restore tab groups
+    const groups = this._savedGroups;
+    if (groups) {
+      Object.entries(groups).forEach(([gid, g]) => {
+        if (g.winIds.length < 2) return;
+        const valid = g.winIds.filter(id => this.windows.has(id));
+        if (valid.length < 2) return;
+        // Merge them
+        for (let i = 1; i < valid.length; i++) {
+          this.mergeToTabGroup(valid[i], valid[0]);
+        }
+        if (g.activeId && valid.includes(g.activeId)) {
+          const groupId = this.windows.get(valid[0]).tabGroup;
+          if (groupId) this.switchTab(groupId, g.activeId);
+        }
+      });
+    }
+  },
+
+  resetLayout() {
+    localStorage.removeItem('eoomy-wm');
+    location.reload();
+  }
+};
+
+
+// ───────────────────────────────────────────────────────────────
+//  19b. UI HELPERS
+// ───────────────────────────────────────────────────────────────
+
+function setTimeScale(v) {
+  G.timeScale = v;
+  G.paused = (v === 0);
+  document.querySelectorAll('.tb-speed').forEach(el => {
+    el.classList.toggle('active', parseInt(el.dataset.speed) === v);
+  });
+}
+
+function setLabelMode(m) {
+  SETTINGS.labelMode = m;
+  document.querySelectorAll('.tb-label').forEach(el => {
+    el.classList.toggle('active', el.dataset.mode === m);
+  });
+}
+
+function setOrbits(v) {
+  SETTINGS.orbits = v;
+  document.querySelectorAll('.tb-orbit').forEach(el => {
+    el.classList.toggle('active', el.dataset.val === String(v));
+  });
+}
+
+
+// ───────────────────────────────────────────────────────────────
+//  20. ASTEROIDS
+// ───────────────────────────────────────────────────────────────
+
+function spawnAsteroid() {
+  const ang  = Math.random() * Math.PI * 2;
+  const spd  = 0.00008 + Math.random() * 0.00015;
+  const dist = 2 + Math.random() * 20;
+  const sx = Math.cos(ang) * dist, sy = Math.sin(ang) * dist;
+  const tAng = Math.random() * Math.PI * 2;
+  const threat = Math.random() < 0.08;
+  const types = ['C-type carbonaceous', 'M-type metallic', 'S-type silicaceous', 'B-type primitive'];
+  const comps = [
+    'Carbon, silicates, water ice \u2014 high H\u2082O potential.',
+    'Nickel-iron core \u2014 high Fe/Ni yield.',
+    'Olivine, pyroxene \u2014 moderate Fe yield.',
+    'Organic compounds, clay minerals \u2014 science value.',
+  ];
+  const ti = Math.floor(Math.random() * types.length);
+  ASTEROIDS.push({
+    name: AST_NAMES[Math.floor(Math.random() * AST_NAMES.length)] + ' ' + (2087 + Math.floor(G.earthDays / 365)),
+    x: sx, y: sy,
+    vx: Math.cos(tAng) * spd, vy: Math.sin(tAng) * spd,
+    r: 1 + Math.random() * 2,
+    type: types[ti], comp: comps[ti],
+    diam: Math.floor(50 + Math.random() * 900),
+    threat,
+    age: 0,
+  });
+}
+
+function updateAsteroids(dtDays) {
+  nextAstSpawn -= dtDays;
+  if (nextAstSpawn <= 0) {
+    spawnAsteroid();
+    nextAstSpawn = 200 + Math.random() * 400;
+  }
+  for (let i = ASTEROIDS.length - 1; i >= 0; i--) {
+    const a = ASTEROIDS[i];
+    a.x += a.vx * dtDays;
+    a.y += a.vy * dtDays;
+    a.age += dtDays;
+    if (a.age > 3000 || Math.hypot(a.x, a.y) > 80) ASTEROIDS.splice(i, 1);
+  }
+}
+
+function updateOrbits(dtDays) {
+  const dtY = dtDays / DPY;
+  Object.values(BODIES).forEach(b => {
+    if (b.period > 0) b.ang += (2 * Math.PI / b.period) * dtY;
+  });
+  if (!G.traveling) G.shipWorld = bw(G.currentBody);
+}
+
+
+// ───────────────────────────────────────────────────────────────
+//  21. GAME LOOP & INIT
+// ───────────────────────────────────────────────────────────────
+
+let lastTs = null;
+
+function loop(ts) {
+  if (!lastTs) lastTs = ts;
+  const dt = Math.min((ts - lastTs) / 1000, 0.1);
+  lastTs = ts;
+
+  if (G.traveling) {
+    updateTravel(dt);
+    const dtDays = G.travel.earthDays * (dt / G.travel.realDur);
+    updateOrbits(dtDays);
+    updateAsteroids(dtDays);
+  } else if (!G.paused && G.timeScale > 0) {
+    const d = G.timeScale * dt;
+    G.earthDays += d;
+    updateOrbits(d);
+    updateAsteroids(d);
+    updateBodyStates(d);
+    updateTravelDots(d);
+    updateCollecting(d);
+    applyPassiveBonuses(d);
+    checkEvents();
+  }
+
+  draw();
+  updateHUD();
+  requestAnimationFrame(loop);
+}
+
+// Resize handler
+window.addEventListener('resize', () => {
+  const ox = canvas.width, oy = canvas.height;
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  CAM.x += (canvas.width - ox) / 2;
+  CAM.y += (canvas.height - oy) / 2;
+  // On mobile, keep all windows full-width
+  if (IS_MOBILE) {
+    WM.windows.forEach(w => {
+      w.w = window.innerWidth;
+      w.el.style.width = window.innerWidth + 'px';
+    });
+  }
+});
+
+// ───────────────────────────────────────────────────────────────
+//  WINDOW REGISTRATION & INIT
+// ───────────────────────────────────────────────────────────────
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+resetCamera();
+G.shipWorld = bw('earth');
+
+// Mobile detection
+const IS_MOBILE = window.innerWidth < 768;
+
+// Initialize Window Manager
+WM.init();
+
+// --- Ship Cargo Window ---
+WM.register({
+  id: 'ship-cargo', title: 'SHIP CARGO', x: 10, y: 10, w: 220, pinned: true,
+  renderFn(body) {
+    const RK = ['Fe', 'Ni', 'H\u2082O', 'He-3', 'S', 'Pt'];
+    let html = '';
+    RK.forEach(k => {
+      const v = Math.floor(G.res[k] || 0);
+      const col = v > 0 ? '#ccc' : '#333';
+      html += '<span class="rb-item"><span class="rb-key">' + k + '</span><span class="rb-val" style="color:' + col + '">' + v + '</span></span> ';
+    });
+    const mnpl = Math.floor(G.res['MNPL'] || 0);
+    html += '<br><span class="rb-item"><span class="rb-key" style="color:#bb88ff">MNPL</span><span class="rb-val" style="color:#dd99ff">' + mnpl + '</span></span>';
+    html += '<div style="color:#333;font-size:7px;margin-top:4px;">Location: ' + BODIES[G.currentBody].name + '</div>';
+    body.innerHTML = html;
+  }
+});
+
+// --- Earth Status Window ---
+WM.register({
+  id: 'earth-status', title: 'EARTH STATUS', x: window.innerWidth - 280, y: 10, w: 270,
+  pinned: true,
+  renderFn(body) { renderEarthPopup(body); }
+});
+
+// --- Event Log Window ---
+WM.register({
+  id: 'event-log', title: 'EVENT LOG', x: 10, y: window.innerHeight - 220, w: 320,
+  pinned: true,
+  renderFn(body) {
+    const html = G.log.slice(0, 8).map(l => {
+      const cls = (l.startsWith('\u26A0') || l.startsWith('\uD83D\uDD34')) ? 'warn'
+                : l.startsWith('\u2713') ? 'good'
+                : l.startsWith('\u25C6') ? 'mystery'
+                : 'plog';
+      return '<div class="' + cls + '" style="margin:1px 0;font-size:9px;">' + l + '</div>';
+    }).join('');
+    body.innerHTML = html || '<span class="plog">Awaiting transmissions\u2026</span>';
+  }
+});
+
+// --- Crew Window ---
+WM.register({
+  id: 'crew', title: 'CREW', x: 10, y: window.innerHeight - 340, w: 220,
+  renderFn(body) {
+    const crewAlert = CREW.some(c => c.status !== 'ACTIVE');
+    body.innerHTML = CREW.map(c => {
+      const cls = c.status === 'ACTIVE' ? 'crew-active' : c.status === 'CRYO' ? 'crew-cryo' : 'crew-dead';
+      const icon = c.status === 'ACTIVE' ? '\u25CF' : c.status === 'CRYO' ? '\u2744' : '\u2715';
+      return '<div class="crew-row"><span class="' + cls + '">' + icon + ' ' + c.name +
+        '</span><span style="color:#666;margin-left:6px">' + c.role +
+        '</span><span class="' + cls + '" style="float:right">' + c.status + '</span></div>';
+    }).join('') +
+    '<div style="margin-top:4px;border-top:1px solid #111;padding-top:3px;font-size:8px;color:#777;">' +
+    G.shipV.toFixed(2) + 'c \u00B7 \u03B3=' + lorentz(G.shipV).toFixed(4) + '</div>';
+    if (crewAlert) WM.setBadge('crew', 1); else WM.setBadge('crew', 0);
+  }
+});
+
+// --- Ship Systems Window ---
+WM.register({
+  id: 'ship-systems', title: 'SHIP SYSTEMS', x: 240, y: 10, w: 260,
+  collapsed: true,
+  renderFn(body) {
+    let html = '<div style="font-size:9px;color:#777;margin-bottom:4px;">' + G.shipV.toFixed(2) + 'c \u00B7 \u03B3=' + lorentz(G.shipV).toFixed(4) + ' | MNPL: ' + Math.floor(G.res['MNPL']) + '</div>';
+    html += '<div style="color:#666;font-size:8px;letter-spacing:1px;margin:6px 0 3px;">UPGRADES</div>';
+    UPGRADES.forEach(u => {
+      const done = G.upgrades[u.id];
+      const req = u.req ? G.upgrades[u.req] : true;
+      const cc = Object.entries(u.cost).map(([k, v]) => '<span style="color:' + ((G.res[k]||0) >= v ? '#44ff88' : '#ff6666') + '">' + v + ' ' + k + '</span>').join(', ');
+      const canAfford = !done && req && Object.entries(u.cost).every(([k, v]) => (G.res[k]||0) >= v);
+      if (done) {
+        html += '<div style="font-size:8px;margin:2px 0;color:#777;">\u2713 ' + u.name + '</div>';
+      } else {
+        html += '<div class="upg-row"><span class="uname">' + u.name + '</span><span class="ucost">' + cc + '</span>' +
+          '<span class="udesc">' + u.desc + '</span>' +
+          '<button class="ubtn" onclick="buyUpgrade(\'' + u.id + '\')"' +
+          (canAfford ? '' : ' disabled style="opacity:.3;cursor:not-allowed"') + '>INSTALL</button></div>';
+      }
+    });
+    body.innerHTML = html;
+  }
+});
+
+// --- Navigation Window ---
+WM.register({
+  id: 'navigation', title: 'NAVIGATION', x: 340, y: window.innerHeight - 180, w: 230,
+  collapsed: true,
+  renderFn(body) {
+    const xpPct = Math.floor((G.humanityXP / G.humanityXPNext) * 100);
+    body.innerHTML =
+      '<div style="font-size:9px;margin-bottom:6px;">' +
+        '<span style="color:#ffff00;">LVL ' + G.humanityLevel + '</span> <span style="color:#666;">XP ' + xpPct + '%</span> | ' +
+        '<span style="color:#aaa;">' + earthDate() + '</span>' +
+      '</div>' +
+      '<div style="color:#666;font-size:8px;letter-spacing:1px;margin-bottom:3px;">SPEED</div>' +
+      '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">' +
+        '<div class="tbtn tb-speed' + (G.timeScale === 0 ? ' active' : '') + '" data-speed="0" onclick="setTimeScale(0)">PAUSE</div>' +
+        '<div class="tbtn tb-speed' + (G.timeScale === 1 ? ' active' : '') + '" data-speed="1" onclick="setTimeScale(1)">1x</div>' +
+        '<div class="tbtn tb-speed' + (G.timeScale === 10 ? ' active' : '') + '" data-speed="10" onclick="setTimeScale(10)">10x</div>' +
+        '<div class="tbtn tb-speed' + (G.timeScale === 100 ? ' active' : '') + '" data-speed="100" onclick="setTimeScale(100)">100x</div>' +
+      '</div>' +
+      '<div style="color:#666;font-size:8px;letter-spacing:1px;margin-bottom:3px;">LABELS</div>' +
+      '<div style="display:flex;gap:4px;margin-bottom:6px;">' +
+        '<div class="tbtn tb-label' + (SETTINGS.labelMode === 'all' ? ' active' : '') + '" data-mode="all" onclick="setLabelMode(\'all\')" style="width:52px">ALL</div>' +
+        '<div class="tbtn tb-label' + (SETTINGS.labelMode === 'near' ? ' active' : '') + '" data-mode="near" onclick="setLabelMode(\'near\')" style="width:52px">NEAR</div>' +
+        '<div class="tbtn tb-label' + (SETTINGS.labelMode === 'none' ? ' active' : '') + '" data-mode="none" onclick="setLabelMode(\'none\')" style="width:52px">NONE</div>' +
+      '</div>' +
+      '<div style="color:#666;font-size:8px;letter-spacing:1px;margin-bottom:3px;">ORBITS</div>' +
+      '<div style="display:flex;gap:4px;margin-bottom:6px;">' +
+        '<div class="tbtn tb-orbit' + (SETTINGS.orbits ? ' active' : '') + '" data-val="true" onclick="setOrbits(true)" style="width:52px">ON</div>' +
+        '<div class="tbtn tb-orbit' + (!SETTINGS.orbits ? ' active' : '') + '" data-val="false" onclick="setOrbits(false)" style="width:52px">OFF</div>' +
+      '</div>' +
+      '<button class="tbtn" onclick="resetCamera()" style="width:100%;color:#aaffaa;border-color:#00ff41">\u2302 RESET CAMERA</button>' +
+      '<button class="tbtn" onclick="WM.resetLayout()" style="width:100%;color:#ff8844;border-color:#ff8844;margin-top:4px">\u21BA RESET LAYOUT</button>';
+  }
+});
+
+// --- Planet Info Window ---
+WM.register({
+  id: 'planet-info', title: 'PLANET INFO',
+  x: Math.floor(window.innerWidth / 2 - 200), y: Math.floor(window.innerHeight / 2 - 200),
+  w: 400, h: 350, visible: false,
+  renderFn(body) {
+    if (G.planetPopupKey) renderPlanetPopup();
+  }
+});
+
+// Event delegation for planet-info clicks (survives innerHTML rebuilds)
+(function() {
+  const piWin = WM.windows.get('planet-info');
+  if (!piWin) return;
+  piWin.bodyEl.addEventListener('click', function(e) {
+    const target = e.target.closest('[data-action]');
+    if (!target) return;
+    e.stopPropagation();
+    const action = target.dataset.action;
+    if (action === 'launch') launchToPopupBody();
+    if (action === 'scan') startScan(G.planetPopupKey);
+    if (action === 'collect') startCollect(G.planetPopupKey);
+    if (action === 'establish') establishBase(G.planetPopupKey);
+    if (action === 'pick') pickResource(G.planetPopupKey, target.dataset.res, parseInt(target.dataset.amt));
+    if (action === 'build') buildStructure(G.planetPopupKey, target.dataset.uid);
+    if (action === 'upgrade') buyPlanetUpgrade(G.planetPopupKey, target.dataset.uid);
+  });
+  piWin.bodyEl.addEventListener('mousedown', function(e) {
+    if (e.target.closest('[data-action]') || e.target.closest('.ubtn') || e.target.closest('button')) {
+      e.stopPropagation();
+    }
+  });
+})();
+
+// --- Alerts Window ---
+WM.register({
+  id: 'alerts', title: 'ALERTS', x: window.innerWidth - 280, y: window.innerHeight - 250, w: 260,
+  renderFn(body) {
+    if (ALERTS.length === 0) {
+      body.innerHTML = '<span class="plog" style="font-size:8px;">No alerts yet. Events will appear here.</span>';
+      return;
+    }
+    body.innerHTML = ALERTS.slice(0, 15).map(a => {
+      const cls = 'alert-item alert-' + a.type;
+      return '<div class="' + cls + '">' +
+        '<span class="alert-time">' + a.time + '</span> ' + a.text +
+        (a.response ? '<span class="alert-response">\u2192 ' + a.response + '</span>' : '') +
+        '</div>';
+    }).join('');
+  }
+});
+
+// Mobile layout defaults
+if (IS_MOBILE && !localStorage.getItem('eoomy-wm')) {
+  let yPos = 0;
+  const mobileOrder = ['ship-cargo', 'navigation', 'event-log', 'crew', 'ship-systems', 'earth-status', 'alerts'];
+  mobileOrder.forEach(id => {
+    const w = WM.windows.get(id);
+    if (!w) return;
+    w.x = 0; w.y = yPos;
+    w.el.style.left = '0px';
+    w.el.style.top = yPos + 'px';
+    w.el.style.width = window.innerWidth + 'px';
+    w.w = window.innerWidth;
+    if (id !== 'ship-cargo') {
+      w.collapsed = true;
+      w.bodyEl.style.display = 'none';
+      w._colBtn.textContent = '\u25B6';
+    }
+    yPos += (id === 'ship-cargo' ? w.el.offsetHeight : 36) + 1;
+  });
+}
+
+// Apply saved layout (positions, collapsed state, tab groups)
+WM.applyLayout();
+
+// Init game
+spawnAsteroid();
+spawnAsteroid();
+addLog('System online. Monopoles: 47 units recovered from crater.');
+requestAnimationFrame(loop);
+
+</script>
+</body>
+</html>
